@@ -61,6 +61,7 @@
         }
     }
 
+    // Validasi Permission Akses
     function ValidatePermission(PDO $Conn, int $accountId, string $id_service_feature): bool{
         $sql = "SELECT accountId
                 FROM account_permission
@@ -76,4 +77,16 @@
         ]);
 
         return ($stmt->fetch() !== false);
+    }
+
+    // Menangkap data dari header
+    function getRequestHeader(string $name): string{
+        if (function_exists('getallheaders')) {
+            $headers = getallheaders();
+            foreach ($headers as $key => $value) {
+                if (strtolower($key) === strtolower($name)) return trim($value);
+            }
+        }
+        $headerKey = 'HTTP_' . strtoupper(str_replace('-', '_', $name));
+        return isset($_SERVER[$headerKey]) ? trim($_SERVER[$headerKey]) : '';
     }

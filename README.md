@@ -137,6 +137,17 @@ rzf-medis-integrator
 ```
 
 ---
+# Database
+Secara default, database terdiri dari struktur dan data basic yang akan dimuat pada pertama kali aplikassi digunakan.
+
+|---------------------------------------------------|
+| Tabel                       | Structure  | Data   |
+|-----------------------------|-----------:|--------|
+|  account                    | Ya         | Tidak  |
+|  account_level              | Ya         | Tidak  |
+|  account_level_reference    | Ya         | Tidak  |
+|  account_permission         | Ya         | Tidak  |
+|---------------------------------------------------|
 
 # Persyaratan
 

@@ -19,7 +19,7 @@
 
     // Limiter
     $Limiter = new RateLimiter($Conn);
-    $Limiter->check("update_account_permission", 5, 60);
+    $Limiter->check("update_account_photo", 5, 60);
 
     // Validate Method
     if ($_SERVER['REQUEST_METHOD'] !== 'PUT') {
@@ -50,14 +50,8 @@
         exit;
     }
 
-    $accountIdToUpdate = isset($_GET['accountId']) ? (int) $_GET['accountId'] : 0;
-    if ($accountIdToUpdate <= 0) {
-        http_response_code(422);
-        echo json_encode(["response" => ["message" => "accountId tidak valid", "code" => 422], "metadata" => []]);
-        exit;
-    }
-
-    $raw = file_get_contents('php://input');
+    // Menangkap Data Body
+    $raw         = file_get_contents('php://input');
     $requestBody = json_decode($raw, true);
     if (!is_array($requestBody)) {
         http_response_code(400);
@@ -65,9 +59,51 @@
         exit;
     }
 
-    if (empty($requestBody)) {
+    $requiredFields = ['accountId', 'photo'];
+    foreach ($requiredFields as $field) {
+        if (!isset($requestBody[$field]) || $requestBody[$field] === '') {
+            http_response_code(422);
+            echo json_encode(["response" => ["message" => "{$field} tidak boleh kosong", "code" => 422], "metadata" => []]);
+            exit;
+        }
+    }
+
+    $accountIdToUpdate = (int) $requestBody['accountId'];
+    $photoBase64       = trim($requestBody['photo']);
+
+    if ($accountIdToUpdate <= 0) {
         http_response_code(422);
-        echo json_encode(["response" => ["message" => "Payload permission tidak boleh kosong", "code" => 422], "metadata" => []]);
+        echo json_encode(["response" => ["message" => "accountId tidak valid", "code" => 422], "metadata" => []]);
+        exit;
+    }
+
+    if (!preg_match('/^data:image\/(png|jpeg|jpg|gif|bmp|webp);base64,/', $photoBase64, $matches)) {
+        http_response_code(422);
+        echo json_encode(["response" => ["message" => "Format photo base64 tidak valid", "code" => 422], "metadata" => []]);
+        exit;
+    }
+
+    $mimeType = strtolower($matches[1]);
+    $allowedTypes = ['png', 'jpeg', 'jpg', 'gif', 'bmp', 'webp'];
+    if (!in_array($mimeType, $allowedTypes, true)) {
+        http_response_code(422);
+        echo json_encode(["response" => ["message" => "Tipe photo tidak diperbolehkan", "code" => 422], "metadata" => []]);
+        exit;
+    }
+
+    $base64Data = substr($photoBase64, strpos($photoBase64, ',') + 1);
+    $base64Data = str_replace(['\r', '\n', ' ', '\t'], '', $base64Data);
+    $photoData = base64_decode($base64Data, true);
+    if ($photoData === false) {
+        http_response_code(422);
+        echo json_encode(["response" => ["message" => "Photo base64 tidak valid", "code" => 422], "metadata" => []]);
+        exit;
+    }
+
+    $maxFileSize = 5 * 1024 * 1024;
+    if (strlen($photoData) > $maxFileSize) {
+        http_response_code(422);
+        echo json_encode(["response" => ["message" => "Ukuran photo maksimal 5 MB", "code" => 422], "metadata" => []]);
         exit;
     }
 
@@ -105,18 +141,18 @@
         }
 
         $stmt = $Conn->prepare("SELECT id_service_feature FROM service_feature WHERE feature_name = :feature_name LIMIT 1");
-        $stmt->execute([':feature_name' => 'update_account_permission']);
+        $stmt->execute([':feature_name' => 'update_account_photo']);
         $feature = $stmt->fetch();
         if (!$feature) {
             http_response_code(403);
-            echo json_encode(["response" => ["message" => "Fitur update_account_permission tidak ditemukan", "code" => 403], "metadata" => []]);
+            echo json_encode(["response" => ["message" => "Fitur update_account_photo tidak ditemukan", "code" => 403], "metadata" => []]);
             exit;
         }
 
         $id_service_feature = $feature['id_service_feature'];
         if (!ValidatePermission($Conn, $accountId, $id_service_feature)) {
             http_response_code(403);
-            echo json_encode(["response" => ["message" => "Tidak memiliki izin untuk mengubah permission akun", "code" => 403], "metadata" => []]);
+            echo json_encode(["response" => ["message" => "Tidak memiliki izin untuk mengubah foto akun", "code" => 403], "metadata" => []]);
             exit;
         }
 
@@ -128,57 +164,36 @@
             exit;
         }
 
-        $validatedIds = [];
-        foreach ($requestBody as $index => $item) {
-            if (!is_array($item) || !isset($item['id_service_feature'])) {
-                http_response_code(422);
-                echo json_encode(["response" => ["message" => "Format payload tidak valid pada index {$index}", "code" => 422], "metadata" => []]);
-                exit;
-            }
-
-            $idServiceFeature = (int) $item['id_service_feature'];
-            if ($idServiceFeature <= 0) {
-                http_response_code(422);
-                echo json_encode(["response" => ["message" => "id_service_feature tidak valid pada index {$index}", "code" => 422], "metadata" => []]);
-                exit;
-            }
-
-            $stmt = $Conn->prepare("SELECT id_service_feature FROM service_feature WHERE id_service_feature = :id_service_feature LIMIT 1");
-            $stmt->execute([':id_service_feature' => $idServiceFeature]);
-            if (!$stmt->fetch()) {
-                http_response_code(422);
-                echo json_encode(["response" => ["message" => "id_service_feature {$idServiceFeature} tidak ditemukan", "code" => 422], "metadata" => []]);
-                exit;
-            }
-
-            $validatedIds[] = $idServiceFeature;
+        $photoExtension = $mimeType === 'jpeg' ? 'jpg' : $mimeType;
+        $photoName = bin2hex(random_bytes(16)) . '.' . $photoExtension;
+        $photoDir = __DIR__ . '/../../Storage/Img/Account';
+        if (!is_dir($photoDir)) {
+            mkdir($photoDir, 0755, true);
         }
 
-        $Conn->beginTransaction();
-
-        $stmt = $Conn->prepare("DELETE FROM account_permission WHERE accountId = :accountId");
-        $stmt->execute([':accountId' => $accountIdToUpdate]);
-
-        $stmt = $Conn->prepare("INSERT INTO account_permission (accountId, id_service_feature) VALUES (:accountId, :id_service_feature)");
-        foreach ($validatedIds as $idServiceFeature) {
-            $stmt->execute([
-                ':accountId' => $accountIdToUpdate,
-                ':id_service_feature' => $idServiceFeature
-            ]);
+        $photoPath = $photoDir . '/' . $photoName;
+        if (file_put_contents($photoPath, $photoData) === false) {
+            http_response_code(500);
+            echo json_encode(["response" => ["message" => "Gagal menyimpan file photo", "code" => 500], "metadata" => []]);
+            exit;
         }
 
-        $Conn->commit();
+        $datetimeNow = gmdate('Y-m-d H:i:s');
+        $stmt = $Conn->prepare("UPDATE account SET photo = :photo, updatedBy = :updatedBy, updatedDate = :updatedDate WHERE accountId = :accountId");
+        $stmt->execute([
+            ':photo' => $photoName,
+            ':updatedBy' => $accountId,
+            ':updatedDate' => $datetimeNow,
+            ':accountId' => $accountIdToUpdate
+        ]);
 
         http_response_code(200);
         echo json_encode([
-            "response" => ["message" => "Permission akun berhasil diperbarui", "code" => 200],
-            "metadata" => ["accountId" => $accountIdToUpdate, "count" => count($validatedIds)]
+            "response" => ["message" => "Foto akun berhasil diperbarui", "code" => 200],
+            "metadata" => ["accountId" => $accountIdToUpdate, "photo" => $photoName, "updatedDate" => $datetimeNow]
         ]);
     } catch (Exception $e) {
-        if ($Conn->inTransaction()) {
-            $Conn->rollBack();
-        }
-        error_log('[UpdateAccountPermission] ' . $e->getMessage());
+        error_log('[UpdateAccountPhoto] ' . $e->getMessage());
         http_response_code(500);
         echo json_encode(["response" => ["message" => "Internal Server Error", "code" => 500], "metadata" => []]);
     }

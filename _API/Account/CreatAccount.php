@@ -9,15 +9,19 @@
     header("Access-Control-Allow-Methods: POST");
     header("Access-Control-Allow-Headers: X-Requested-With, Content-Type, Accept, Origin, x-token, token, account_token");
 
+    // Set Time Zone
     date_default_timezone_set('UTC');
 
+    // Include-Require Resource
     include "../../_Config/Connection.php";
     include "../../_Config/Helper.php";
     require "../../_Config/RateLimiter.php";
 
+    // Limiter
     $Limiter = new RateLimiter($Conn);
     $Limiter->check("create_account", 5, 60);
 
+    // Validate Method
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         http_response_code(405);
         echo json_encode([
@@ -30,28 +34,24 @@
         exit;
     }
 
-    function getRequestHeader(string $name): string
-    {
-        if (function_exists('getallheaders')) {
-            $headers = getallheaders();
-            foreach ($headers as $key => $value) {
-                if (strtolower($key) === strtolower($name)) return trim($value);
-            }
-        }
-        $headerKey = 'HTTP_' . strtoupper(str_replace('-', '_', $name));
-        return isset($_SERVER[$headerKey]) ? trim($_SERVER[$headerKey]) : '';
-    }
-
-    $apiToken = getRequestHeader('token');
+    // Menangkap data dari header (token dan account_token)
+    $apiToken     = getRequestHeader('token');
     $accountToken = getRequestHeader('account_token');
 
-    if (empty($apiToken) || empty($accountToken)) {
+    // Validasi token dan account_token
+    if (empty($apiToken)) {
         http_response_code(401);
-        echo json_encode(["response"=>["message"=>"Token atau account_token tidak ditemukan","code"=>401],"metadata"=>[]]);
+        echo json_encode(["response"=>["message"=>"Token Kredensial Aplikasi Tidak Boleh Kosong","code"=>401],"metadata"=>[]]);
+        exit;
+    }
+    if (empty($accountToken)) {
+        http_response_code(401);
+        echo json_encode(["response"=>["message"=>"Token Sesi Akses Tidak Boleh Kosong","code"=>401],"metadata"=>[]]);
         exit;
     }
 
-    $raw = file_get_contents('php://input');
+    // Menangkap Data Body
+    $raw         = file_get_contents('php://input');
     $requestBody = json_decode($raw, true);
     if (!is_array($requestBody)) {
         http_response_code(400);
@@ -68,13 +68,14 @@
         }
     }
 
+    // Buat variabel Dan Sanitasi
     $id_account_level = (int) $requestBody['id_account_level'];
-    $photoBase64 = isset($requestBody['photo']) ? trim($requestBody['photo']) : '';
-    $name = validateAndSanitizeInput($requestBody['name']);
-    $email = validateAndSanitizeInput($requestBody['email']);
-    $phone = validateAndSanitizeInput($requestBody['phone']);
-    $password = $requestBody['password'];
-    $status = isset($requestBody['status']) ? (int) $requestBody['status'] : 1;
+    $photoBase64      = isset($requestBody['photo']) ? trim($requestBody['photo']) : '';
+    $name             = validateAndSanitizeInput($requestBody['name']);
+    $email            = validateAndSanitizeInput($requestBody['email']);
+    $phone            = validateAndSanitizeInput($requestBody['phone']);
+    $password         = $requestBody['password'];
+    $status           = isset($requestBody['status']) ? (int) $requestBody['status'] : 1;
 
     if (strlen($name) > 200) {
         http_response_code(422);
