@@ -13,18 +13,20 @@
 
     include "../../_Config/Connection.php";
     include "../../_Config/Helper.php";
+
+    // Ratelimit
     require "../../_Config/RateLimiter.php";
 
     $Limiter = new RateLimiter($Conn);
-    $Limiter->check("list_account", 5, 60);
+
+    // Maksimal 5 request setiap 60 detik
+    $Limiter->check("list_service_feature",5,60);
+
 
     if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
         http_response_code(405);
         echo json_encode([
-            "response" => [
-                "message" => "Metode request tidak diizinkan",
-                "code" => 405
-            ],
+            "response" => ["message" => "Metode request tidak diizinkan","code" => 405],
             "metadata" => []
         ]);
         exit;
@@ -49,31 +51,20 @@
         exit;
     }
 
-    $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 10;
-    $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
-    $order_by = isset($_GET['order_by']) ? validateAndSanitizeInput($_GET['order_by']) : 'accountId';
-    $short_by = isset($_GET['short_by']) ? strtoupper(validateAndSanitizeInput($_GET['short_by'])) : 'DESC';
+    // read and sanitize query params
+    $limit      = isset($_GET['limit']) ? (int) $_GET['limit'] : 10;
+    $page       = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+    $order_by   = isset($_GET['order_by']) ? validateAndSanitizeInput($_GET['order_by']) : 'id_service_feature';
+    $short_by   = isset($_GET['short_by']) ? strtoupper(validateAndSanitizeInput($_GET['short_by'])) : 'ASC';
     $keyword_by = isset($_GET['keyword_by']) ? validateAndSanitizeInput($_GET['keyword_by']) : '';
-    $keyword = isset($_GET['keyword']) ? validateAndSanitizeInput($_GET['keyword']) : '';
+    $keyword    = isset($_GET['keyword']) ? validateAndSanitizeInput($_GET['keyword']) : '';
 
+    // enforce limits
     if ($limit < 10) $limit = 10;
     if ($limit > 100) $limit = 100;
     if ($page < 1) $page = 1;
 
-    $allowedColumns = [
-        'accountId',
-        'id_account_level',
-        'photo',
-        'name',
-        'email',
-        'phone',
-        'status',
-        'createdBy',
-        'createdDate',
-        'updatedBy',
-        'updatedDate'
-    ];
-
+    $allowedColumns = ['id_service_feature','feature_name','feature_category','feature_description','datetime_creat'];
     if (!in_array($order_by, $allowedColumns, true)) {
         http_response_code(400);
         echo json_encode(["response"=>["message"=>"order_by tidak valid","code"=>400],"metadata"=>[]]);
@@ -95,6 +86,7 @@
     $offset = ($page - 1) * $limit;
 
     try {
+        // validate token
         $stmt = $Conn->prepare("SELECT t.*, k.client_id, k.api_name, k.id_api_key FROM api_token t JOIN api_key k ON t.id_api_key = k.id_api_key WHERE t.token = :token LIMIT 1");
         $stmt->execute([':token' => $apiToken]);
         $tokenData = $stmt->fetch();
@@ -112,73 +104,49 @@
             exit;
         }
 
+        // build where clause
         $where = "WHERE 1";
         $params = [];
         if ($keyword !== '' && $keyword_by !== '') {
-            $where .= " AND a.`{$keyword_by}` LIKE :keyword";
+            $where .= " AND `{$keyword_by}` LIKE :keyword";
             $params[':keyword'] = "%{$keyword}%";
         }
 
-        $countSql = "SELECT COUNT(*) AS total FROM account a " . $where;
+        // total count
+        $countSql = "SELECT COUNT(*) AS total FROM service_feature " . $where;
         $countStmt = $Conn->prepare($countSql);
         $countStmt->execute($params);
         $countRow = $countStmt->fetch();
         $total = (int) ($countRow['total'] ?? 0);
 
-        $sql = "SELECT
-            a.accountId,
-            a.id_account_level,
-            al.level_name,
-            a.photo,
-            a.name,
-            a.email,
-            a.phone,
-            a.status,
-            a.createdBy,
-            ca.name AS createdName,
-            a.createdDate,
-            a.updatedBy,
-            ua.name AS updated_name,
-            a.updatedDate
-        FROM account a
-        LEFT JOIN account_level al ON a.id_account_level = al.id_account_level
-        LEFT JOIN account ca ON a.createdBy = ca.accountId
-        LEFT JOIN account ua ON a.updatedBy = ua.accountId
-        " . $where;
-        $sql .= " ORDER BY a.`{$order_by}` {$short_by} LIMIT {$offset}, {$limit}";
+        // data query
+        $sql = "SELECT id_service_feature, feature_name, feature_category, feature_description FROM service_feature " . $where;
+        $sql .= " ORDER BY `{$order_by}` {$short_by} LIMIT {$offset}, {$limit}";
 
         $stmt = $Conn->prepare($sql);
-        foreach ($params as $key => $value) {
-            $stmt->bindValue($key, $value, PDO::PARAM_STR);
-        }
+        foreach ($params as $k=>$v) $stmt->bindValue($k, $v, PDO::PARAM_STR);
         $stmt->execute();
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        foreach ($rows as &$row) {
-            $row['status'] = isset($row['status']) ? (int) $row['status'] : 0;
-            $row['status_display'] = $row['status'] === 1 ? 'Active' : 'Inactive';
-            $row['createdBy'] = isset($row['createdBy']) ? (int) $row['createdBy'] : null;
-            $row['updatedBy'] = isset($row['updatedBy']) ? (int) $row['updatedBy'] : null;
-            if ($row['createdName'] === null) {
-                unset($row['createdName']);
-            }
-            if ($row['updated_name'] === null) {
-                unset($row['updated_name']);
-            }
-        }
-        unset($row);
-
         http_response_code(200);
         echo json_encode([
-            "response" => ["message" => "List account berhasil diambil","code" => 200],
+            "response" => ["message" => "List service_feature berhasil diambil","code" => 200],
             "metadata" => [
                 "total" => $total,
+                "page" => $page,
+                "limit" => $limit,
+                "order_by" => $order_by,
+                "short_by" => $short_by,
+                "keyword_by" => $keyword_by,
+                "keyword" => $keyword,
                 "retrieved_at" => gmdate('Y-m-d H:i:s') . ' GMT'
             ],
             "data" => $rows
         ]);
+
     } catch (Exception $e) {
-        error_log('[ListAccount] ' . $e->getMessage());
+        // Log exception for debugging
+        error_log('[ListsServiceFeature] ' . $e->getMessage());
         http_response_code(500);
-        echo json_encode(["response"=>["message"=>"Internal Server Error","code"=>500],"metadata"=>[]]);
+        echo json_encode(["response"=>["message"=>"Internal Server Error","code"=>500],"metadata"=>["error"=> $e->getMessage()]]);
     }

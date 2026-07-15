@@ -60,3 +60,20 @@
             return "Query Error: " . $e->getMessage();
         }
     }
+
+    function ValidatePermission(PDO $Conn, int $accountId, string $id_service_feature): bool{
+        $sql = "SELECT accountId
+                FROM account_permission
+                WHERE accountId = :accountId
+                AND id_service_feature = :id_service_feature
+                LIMIT 1";
+
+        $stmt = $Conn->prepare($sql);
+
+        $stmt->execute([
+            ':accountId' => $accountId,
+            ':id_service_feature' => $id_service_feature
+        ]);
+
+        return ($stmt->fetch() !== false);
+    }
