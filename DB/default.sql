@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Jul 16, 2026 at 04:23 PM
+-- Generation Time: Jul 16, 2026 at 08:00 PM
 -- Server version: 9.1.0
 -- PHP Version: 8.1.31
 
@@ -175,15 +175,16 @@ CREATE TABLE IF NOT EXISTS `api_token` (
 DROP TABLE IF EXISTS `body_site`;
 CREATE TABLE IF NOT EXISTS `body_site` (
   `id_body_site` int UNSIGNED NOT NULL AUTO_INCREMENT,
-  `body_site_nama` varchar(255) NOT NULL COMMENT 'Nama Body Site Dalam istilah Lokal',
+  `body_site_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Nama Body Site Dalam istilah Lokal',
   `body_site_display` varchar(255) DEFAULT NULL COMMENT 'Nama Body Site Berdasarkan standar referensi yang digunakan',
   `body_site_code` varchar(255) DEFAULT NULL COMMENT 'Kode Body Site Berdasarkan standar referensi yang digunakan',
   `body_site_system` text COMMENT 'System Sumber',
   `datetime_creat` datetime NOT NULL COMMENT 'Keterangan waktu pembuatan data',
   `datetime_update` datetime NOT NULL COMMENT 'Keterangan waktu kapan diubah',
-  `author_id` int UNSIGNED DEFAULT NULL COMMENT 'ID akses autohor',
+  `author_id` int UNSIGNED DEFAULT NULL COMMENT 'Account ID autohor',
   `author_name` varchar(255) DEFAULT NULL COMMENT 'Nama Author',
-  PRIMARY KEY (`id_body_site`)
+  PRIMARY KEY (`id_body_site`),
+  KEY `body_site_to_account` (`author_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Daftar Referensi Lokasi Tubuh';
 
 -- --------------------------------------------------------
@@ -219,7 +220,7 @@ CREATE TABLE IF NOT EXISTS `encounter` (
 DROP TABLE IF EXISTS `icd`;
 CREATE TABLE IF NOT EXISTS `icd` (
   `id_icd` int UNSIGNED NOT NULL AUTO_INCREMENT,
-  `kode` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `kode` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `long_des` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `short_des` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `icd` enum('ICD9','ICD10','ICD11') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
@@ -499,6 +500,12 @@ ALTER TABLE `account_token`
 --
 ALTER TABLE `api_token`
   ADD CONSTRAINT `token_to_api` FOREIGN KEY (`id_api_key`) REFERENCES `api_key` (`id_api_key`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `body_site`
+--
+ALTER TABLE `body_site`
+  ADD CONSTRAINT `body_site_to_account` FOREIGN KEY (`author_id`) REFERENCES `account` (`accountId`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `encounter`

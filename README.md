@@ -32,55 +32,81 @@ Saat ini aplikasi telah memiliki fitur berikut.
 
 ## Authentication
 
-- Login User
-- JWT/Token Authentication
-- Account Management
-- Permission Management
+- Login User: melakukan autentikasi akun dan menghasilkan token untuk akses API.
+- JWT/Token Authentication: validasi token API pada setiap request yang memerlukan hak akses.
+- Account Management: pembuatan, pembaruan, dan pengelolaan data akun pengguna.
+- Permission Management: pengaturan hak akses fitur berdasarkan akun.
+- Logout: mengakhiri sesi dan menonaktifkan token jika diperlukan.
 
-## API Key
+## API Key Management
 
-- Generate API Key
-- Update API Key
-- Delete API Key
-- List API Key
+- Generate API Key: membuat kredensial API baru untuk aplikasi klien.
+- List API Key: menampilkan daftar API Key yang terdaftar.
+- Update API Key: memperbarui informasi dan status API Key.
+- Delete API Key: menghapus API Key dari sistem.
+- Token Issuance: endpoint token untuk mendapatkan akses token dari API Key.
+
+## Reference Data
+
+Menangani data master referensi yang sering digunakan dalam sistem kesehatan, seperti kode ICD dan lokasi tubuh.
+
+- Body Site Reference: menampilkan daftar referensi lokasi tubuh (`body_site`).
+- ICD Reference: menampilkan daftar referensi ICD (`icd`).
+- Region Reference: menampilkan daftar provinsi, kabupaten/kota, kecamatan, dan desa.
+- Referensi ini mendukung pencarian, penyaringan, paging, dan pengurutan.
 
 ## Storage
 
 Media penyimpanan untuk berbagai file.
 
-- Dokumen
-- Image
-- DICOM
+- Dokumen: penyimpanan file dokumen medis.
+- Image: penyimpanan gambar medis.
+- DICOM: penyimpanan berkas DICOM untuk citra medis.
 
 ## Proxy
 
 Proxy digunakan agar file tidak diakses secara langsung dari folder storage.
 
-- Image Proxy
-- Document Proxy
+- Image Proxy: mengakses gambar melalui endpoint terkontrol.
+- Document Proxy: mengakses dokumen melalui endpoint terkontrol.
 
 ## Security
 
-- API Key Validation
-- Token Authentication
-- Rate Limiter
-- Helper Validation
-- Permission Access
+- API Key Validation: memastikan request datang dari aplikasi yang terdaftar.
+- Token Authentication: memeriksa token aktif untuk setiap panggilan API.
+- Rate Limiter: membatasi jumlah request per interval waktu untuk mencegah penyalahgunaan.
+- Helper Validation: sanitasi input dan validasi data request.
+- Permission Access: memastikan akun hanya mengakses fitur yang diizinkan.
 
-## Reference
+## Available API Endpoints
 
-Folder khusus yang nantinya berisi berbagai referensi master dari SATUSEHAT maupun referensi internal.
+Beberapa endpoint API yang tersedia di folder `_API`:
 
-Contoh:
+- `_API/Token/get_token.php`: mendapatkan token akses dari `client_id` dan `client_key`.
+- `_API/ApiKey/CreatApiKey.php`: membuat API Key baru.
+- `_API/ApiKey/ListApiKey.php`: menampilkan daftar API Key.
+- `_API/ApiKey/UpdateApiKey.php`: memperbarui API Key.
+- `_API/ApiKey/DeleteApiKey.php`: menghapus API Key.
+- `_API/Account/Login.php`: login user.
+- `_API/Account/Logout.php`: logout user.
+- `_API/Account/CreatAccount.php`: membuat akun baru.
+- `_API/Account/UpdateAccount.php`: memperbarui data akun.
+- `_API/Account/UpdateAccountPassword.php`: mengubah password akun.
+- `_API/Account/UpdateAccountPermission.php`: mengelola hak akses akun.
+- `_API/Account/UpdateAccountPhoto.php`: memperbarui foto akun.
+- `_API/Account/DetailAccount.php`: menampilkan detail akun.
+- `_API/Account/ListAccount.php`: daftar akun.
+- `_API/Account/ListAccountLevel.php`: menampilkan level akun.
+- `_API/Account/ListServiceFeature.php`: menampilkan fitur layanan.
+- `_API/Reference/BodySite/bodysite.php`: referensi body site.
+- `_API/Reference/ICD/icd.php`: referensi ICD.
+- `_API/Reference/Region/Province.php`: referensi provinsi.
+- `_API/Reference/Region/City.php`: referensi kabupaten/kota.
+- `_API/Reference/Region/District.php`: referensi kecamatan.
+- `_API/Reference/Region/Vilage.php`: referensi desa.
+- `_API/Patient/`: folder untuk endpoint pasien (belum ada file saat ini).
 
-- Agama
-- Jenis Kelamin
-- Pendidikan
-- Pekerjaan
-- ICD-10
-- ICD-9 CM
-- Wilayah
-- dan lain-lain.
+Setiap endpoint dapat digunakan untuk mengakses data referensi dan manajemen API secara terpusat, sehingga memudahkan integrasi antara SIMRS dan layanan eksternal.
 
 ---
 
