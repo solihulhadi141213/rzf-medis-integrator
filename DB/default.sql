@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Jul 14, 2026 at 07:11 PM
+-- Generation Time: Jul 15, 2026 at 05:22 PM
 -- Server version: 9.1.0
 -- PHP Version: 8.1.31
 
@@ -37,9 +37,9 @@ CREATE TABLE IF NOT EXISTS `account` (
   `phone` varchar(15) DEFAULT NULL,
   `password` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `status` enum('0','1') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT '0' COMMENT 'Active Or Inavtive',
-  `createdBy` int UNSIGNED DEFAULT NULL,
+  `createdBy` int UNSIGNED DEFAULT NULL COMMENT 'accountId creator',
   `createdDate` datetime DEFAULT NULL,
-  `updatedBy` int UNSIGNED DEFAULT NULL,
+  `updatedBy` int UNSIGNED DEFAULT NULL COMMENT 'accountId updater',
   `updatedDate` datetime DEFAULT NULL,
   PRIMARY KEY (`accountId`),
   KEY `account_to_level` (`id_account_level`)
@@ -85,7 +85,7 @@ DROP TABLE IF EXISTS `account_permission`;
 CREATE TABLE IF NOT EXISTS `account_permission` (
   `id_account_permission` int UNSIGNED NOT NULL AUTO_INCREMENT,
   `accountId` int UNSIGNED NOT NULL COMMENT 'Dari tabel account',
-  `id_service_feature` int UNSIGNED NOT NULL COMMENT 'dari tabel service_feature',
+  `id_service_feature` int UNSIGNED NOT NULL COMMENT 'Dari tabel service_feature',
   PRIMARY KEY (`id_account_permission`),
   KEY `permission_to_account` (`accountId`),
   KEY `permission_to_features` (`id_service_feature`)
@@ -155,7 +155,7 @@ DROP TABLE IF EXISTS `rate_limit`;
 CREATE TABLE IF NOT EXISTS `rate_limit` (
   `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
   `ip_address` varchar(45) NOT NULL,
-  `endpoint` varchar(100) NOT NULL,
+  `endpoint` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `request_time` int UNSIGNED NOT NULL,
   `hit_count` smallint UNSIGNED NOT NULL DEFAULT '1',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -164,6 +164,28 @@ CREATE TABLE IF NOT EXISTS `rate_limit` (
   KEY `idx_cleanup` (`request_time`),
   KEY `idx_endpoint` (`endpoint`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `satusehat`
+--
+
+DROP TABLE IF EXISTS `satusehat`;
+CREATE TABLE IF NOT EXISTS `satusehat` (
+  `credentialId` int NOT NULL AUTO_INCREMENT,
+  `credentialName` varchar(255) NOT NULL,
+  `baseUrl` varchar(255) NOT NULL,
+  `organizationId` varchar(255) NOT NULL,
+  `clientKey` varchar(255) NOT NULL,
+  `secretKey` varchar(255) NOT NULL,
+  `status` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Active Or Inactive',
+  `token` varchar(255) DEFAULT NULL,
+  `tokenExpired` timestamp NULL DEFAULT NULL COMMENT 'Batas waktu token (UTC)',
+  `createdDate` datetime DEFAULT NULL,
+  `updatedDate` datetime DEFAULT NULL,
+  PRIMARY KEY (`credentialId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Menyimpan credential satusehat';
 
 -- --------------------------------------------------------
 
@@ -177,7 +199,6 @@ CREATE TABLE IF NOT EXISTS `service_feature` (
   `feature_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `feature_category` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `feature_description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci,
-  `datetime_creat` timestamp NOT NULL,
   PRIMARY KEY (`id_service_feature`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
@@ -215,6 +236,56 @@ CREATE TABLE IF NOT EXISTS `tb_meta` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `tb_patient`
+--
+
+DROP TABLE IF EXISTS `tb_patient`;
+CREATE TABLE IF NOT EXISTS `tb_patient` (
+  `patientId` int NOT NULL AUTO_INCREMENT,
+  `photo` varchar(9) DEFAULT NULL,
+  `noMedicalRecord` varchar(9) DEFAULT NULL,
+  `satuSehatCode` varchar(20) DEFAULT NULL,
+  `name` varchar(50) DEFAULT NULL,
+  `email` varchar(50) DEFAULT NULL,
+  `phone` varchar(15) DEFAULT NULL,
+  `gender` enum('0','1','2','3','4') DEFAULT '0',
+  `birthPlace` varchar(50) DEFAULT NULL,
+  `birthDate` date DEFAULT NULL,
+  `nik` varchar(16) DEFAULT NULL,
+  `assurance` int DEFAULT NULL,
+  `motherName` varchar(50) DEFAULT NULL,
+  `religion` enum('1','2','3','4','5','6','7','8') DEFAULT NULL,
+  `martialStatus` enum('S','M','W','D') DEFAULT NULL,
+  `lastEducation` enum('0','1','2','3','4','5','6','7','8') DEFAULT '0',
+  `occupation` enum('0','1','2','3','4','5') NOT NULL DEFAULT '0',
+  `language` varchar(50) DEFAULT NULL,
+  `ethnic` varchar(20) DEFAULT NULL,
+  `citizenshipStatus` enum('1','2') NOT NULL DEFAULT '1',
+  `province` int DEFAULT NULL,
+  `city` int DEFAULT NULL,
+  `district` bigint DEFAULT NULL,
+  `village` bigint DEFAULT NULL,
+  `rt` varchar(3) DEFAULT NULL,
+  `rw` varchar(3) DEFAULT NULL,
+  `postalCode` varchar(5) DEFAULT NULL,
+  `address` mediumtext,
+  `cityName` varchar(50) DEFAULT NULL,
+  `status` enum('1','2') NOT NULL DEFAULT '1',
+  `syncStatus` enum('0','1') NOT NULL DEFAULT '0',
+  `createdBy` int DEFAULT NULL,
+  `createdDate` datetime DEFAULT NULL,
+  `updatedBy` int DEFAULT NULL,
+  `updatedDate` datetime DEFAULT NULL,
+  `oldMedicalRecord` varchar(15) DEFAULT NULL,
+  `kkNumber` varchar(16) DEFAULT NULL,
+  `kkName` varchar(50) DEFAULT NULL,
+  `assuranceNumber` varchar(20) DEFAULT NULL,
+  PRIMARY KEY (`patientId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `tb_profile`
 --
 
@@ -247,36 +318,24 @@ CREATE TABLE IF NOT EXISTS `tb_profile` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `tb_satusehat_cred`
+-- Table structure for table `tb_registration`
 --
 
-DROP TABLE IF EXISTS `tb_satusehat_cred`;
-CREATE TABLE IF NOT EXISTS `tb_satusehat_cred` (
-  `credentialId` int NOT NULL AUTO_INCREMENT,
-  `organizationId` varchar(255) NOT NULL,
-  `clientKey` varchar(255) NOT NULL,
-  `secretKey` varchar(255) NOT NULL,
-  `status` enum('0','1') NOT NULL DEFAULT '0',
+DROP TABLE IF EXISTS `tb_registration`;
+CREATE TABLE IF NOT EXISTS `tb_registration` (
+  `registrationId` int NOT NULL AUTO_INCREMENT,
+  `registrationCode` varchar(15) DEFAULT NULL,
+  `registrationDate` datetime DEFAULT NULL,
+  `patientId` varchar(9) DEFAULT NULL,
+  `noMedicalRecord` varchar(9) DEFAULT NULL,
+  `destination` int DEFAULT NULL,
+  `room` int DEFAULT NULL,
+  `status` varchar(20) DEFAULT NULL,
   `createdBy` int DEFAULT NULL,
   `createdDate` datetime DEFAULT NULL,
   `updatedBy` int DEFAULT NULL,
   `updatedDate` datetime DEFAULT NULL,
-  PRIMARY KEY (`credentialId`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `tb_satusehat_token`
---
-
-DROP TABLE IF EXISTS `tb_satusehat_token`;
-CREATE TABLE IF NOT EXISTS `tb_satusehat_token` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `environment` varchar(20) NOT NULL,
-  `token` text NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`registrationId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
