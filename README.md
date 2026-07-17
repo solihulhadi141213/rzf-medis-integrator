@@ -133,33 +133,82 @@ Setiap endpoint dapat digunakan untuk mengakses data referensi dan manajemen API
 
 ```
 rzf-medis-integrator
-│
-├── DB
-│   └── default.sql
-│
-├── Storage
-│   ├── DICOM
-│   ├── Doc
-│   └── Img
-│
-├── _API
-│   ├── Account
-│   ├── ApiKey
-│   ├── Reference
-│   └── Token
-│
-├── _Config
-│   ├── Connection.php
-│   ├── Helper.php
-│   └── RateLimiter.php
-│
-├── _Proxy
-│   ├── DocumentProxy
-│   └── ImageProxy
-│
-├── index.php
-├── README.md
-└── LICENSE
+|   .gitignore
+|   index.php
+|   LICENSE
+|   README-structure.txt
+|   README.md
+|   struktur.txt
+|   
++---DB
+|       default.sql
+|       
++---Storage
+|   +---DICOM
+|   +---Doc
+|   \---Img
+|       +---Account
+|       |       24a166d3a8eeed3b46167f93624ca83a.png
+|       |       64ffa523717340c164e75f3f74302f.png
+|       |       e7dff11a659df09176d5b15f282ea193.png
+|       |       f0b31cf59510443af5f6b75bbc7baec2.png
+|       |       
+|       \---Patient
++---_API
+|   +---Account
+|   |       CreatAccount.php
+|   |       DeleteAccount.php
+|   |       DetailAccount.php
+|   |       ListAccount.php
+|   |       ListAccountLevel.php
+|   |       ListServiceFeature.php
+|   |       Login.php
+|   |       Logout.php
+|   |       UpdateAccount.php
+|   |       UpdateAccountPassword.php
+|   |       UpdateAccountPermission.php
+|   |       UpdateAccountPhoto.php
+|   |       
+|   +---ApiKey
+|   |       CreatApiKey.php
+|   |       DeleteApiKey.php
+|   |       ListApiKey.php
+|   |       UpdateApiKey.php
+|   |       
+|   +---Patient
+|   +---Reference
+|   |   +---BodySite
+|   |   |       bodysite.php
+|   |   |       
+|   |   +---ICD
+|   |   |       icd.php
+|   |   |       
+|   |   \---Region
+|   |           City.php
+|   |           District.php
+|   |           Province.php
+|   |           Vilage.php
+|   |           
+|   +---Satusehat
+|   |       CreatCredential.php
+|   |       CredentialStatus.php
+|   |       DeleteCredential.php
+|   |       DetailCredential.php
+|   |       ListCredential.php
+|   |       UpdateCredential.php
+|   |       
+|   \---Token
+|           get_token.php
+|           
++---_Config
+|       Connection.php
+|       Helper.php
+|       RateLimiter.php
+|       
+\---_Proxy
+    +---DocumentProxy
+    \---ImageProxy
+            AccountImage.php
 ```
 
 ---
@@ -167,12 +216,12 @@ rzf-medis-integrator
 Secara default, database terdiri dari struktur dan data basic yang akan dimuat pada pertama kali aplikassi digunakan.
 
 
-| Tabel                       | Structure  | Data   |
-|-----------------------------|-----------:|--------|
-|  account                    | Ya         | Tidak  |
-|  account_level              | Ya         | Tidak  |
-|  account_level_reference    | Ya         | Tidak  |
-|  account_permission         | Ya         | Tidak  |
+| No | Tabel                       | Structure  | Default Data   |
+|----|-----------------------------|-----------:|----------------|
+| 1  |  account                    | Ya         |      Tidak     |
+| 2  |  account_level              | Ya         |      Tidak     |
+| 3  |  account_level_reference    | Ya         |      Tidak     |
+| 4  |  account_permission         | Ya         |      Tidak     |
 
 
 # Persyaratan

@@ -30,21 +30,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     exit;
 }
 
-function getRequestHeader(string $name): string
-{
-    if (function_exists('getallheaders')) {
-        $headers = getallheaders();
-        foreach ($headers as $key => $value) {
-            if (strtolower($key) === strtolower($name)) {
-                return trim($value);
-            }
-        }
-    }
-
-    $headerKey = 'HTTP_' . strtoupper(str_replace('-', '_', $name));
-    return isset($_SERVER[$headerKey]) ? trim($_SERVER[$headerKey]) : '';
-}
-
 $apiToken = getRequestHeader('token');
 if (empty($apiToken)) {
     http_response_code(401);
