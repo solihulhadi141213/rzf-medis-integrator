@@ -139,11 +139,11 @@
                     </p>
 
                     <div class="d-flex gap-3 flex-wrap">
-                        <a href="README.md" class="btn btn-light btn-lg btn-doc">
-                            <i class="bi bi-book me-2"></i>Dokumentasi
+                        <a href="https://github.com/solihulhadi141213/rzf-medis-integrator" class="btn btn-light btn-lg btn-doc">
+                            <i class="bi bi-github me-2"></i> GITHUB
                         </a>
-                        <a href="#" class="btn btn-outline-light btn-lg btn-doc">
-                            <i class="bi bi-code-slash me-2"></i>REST API
+                        <a href="https://rsuelsyifa.postman.co/workspace/c0687880-a5b8-40fd-91fa-b141d98ad5dc" class="btn btn-outline-light btn-lg btn-doc">
+                            <i class="bi bi-code-slash me-2"></i> REST API
                         </a>
                     </div>
 

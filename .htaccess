@@ -1,0 +1,31 @@
+# ============================================
+# RZF Medis Integrator
+# Security Configuration
+# ============================================
+
+Options -Indexes
+ServerSignature Off
+
+# Disable MultiViews
+Options -MultiViews
+
+# Blok file sensitif
+<FilesMatch "^(composer\.(json|lock)|package(-lock)?\.json|yarn\.lock|README.*|LICENSE|\.gitignore|\.env)$">
+    Require all denied
+</FilesMatch>
+
+# Blok file SQL
+<FilesMatch "\.(sql|bak|zip|rar|7z|tar|gz)$">
+    Require all denied
+</FilesMatch>
+
+# Blok file konfigurasi PHP tertentu
+<FilesMatch "^(Connection|Helper|RateLimiter)\.php$">
+    Require all denied
+</FilesMatch>
+
+# Blok file hidden
+RedirectMatch 403 /\..*$
+
+# Matikan directory listing
+Options -Indexes
