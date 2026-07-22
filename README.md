@@ -24,6 +24,26 @@ Selain integrasi SATUSEHAT, aplikasi ini juga dirancang sebagai pusat layanan (s
 - Rate Limiting
 - Integrasi sistem pihak ketiga
 
+## Definition
+
+Berikut istilah SATUSEHAT yang digunakan pada project ini:
+
+- `Authentication`: proses otentikasi untuk mendapatkan akses ke API SATUSEHAT.
+- `Organization`: data fasilitas kesehatan atau organisasi layanan.
+- `Practitioner`: data tenaga kesehatan atau petugas medis.
+- `Patient`: data pasien.
+- `Encounter`: data kunjungan atau perawatan pasien.
+- `Observation`: data hasil observasi klinis atau pemeriksaan.
+- `Condition`: data diagnosa atau kondisi klinis pasien.
+- `Medication`: data obat atau terapi yang diberikan.
+- `Procedure`: data tindakan medis.
+- `DiagnosticReport`: data laporan hasil pemeriksaan diagnostik.
+- `ImagingStudy`: data pemeriksaan pencitraan medis.
+- `Binary`: data file biner yang terkait dengan dokumen atau lampiran.
+- `DocumentReference`: data referensi dokumen medis.
+- `Location`: data lokasi fasilitas, ruangan, kelas, atau bed.
+- `Credential`: data konfigurasi akses ke SATUSEHAT pada sistem ini.
+
 ---
 
 # Fitur

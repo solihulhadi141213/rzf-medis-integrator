@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Jul 17, 2026 at 08:40 PM
+-- Generation Time: Jul 22, 2026 at 06:34 PM
 -- Server version: 9.1.0
--- PHP Version: 8.1.31
+-- PHP Version: 7.4.33
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -111,12 +111,12 @@ CREATE TABLE IF NOT EXISTS `account_token` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `alergen`
+-- Table structure for table `allergen`
 --
 
-DROP TABLE IF EXISTS `alergen`;
-CREATE TABLE IF NOT EXISTS `alergen` (
-  `id_alergen` int UNSIGNED NOT NULL AUTO_INCREMENT,
+DROP TABLE IF EXISTS `allergen`;
+CREATE TABLE IF NOT EXISTS `allergen` (
+  `AllergenId` int UNSIGNED NOT NULL AUTO_INCREMENT,
   `category` enum('Food','Medication','Environment','Biologic') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Kategori Alergen',
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Nama Alergen',
   `code_alergen` varchar(255) DEFAULT NULL,
@@ -126,8 +126,38 @@ CREATE TABLE IF NOT EXISTS `alergen` (
   `author_name` varchar(255) NOT NULL COMMENT 'Nama pembuat',
   `datetime_creat` timestamp NOT NULL,
   `status` tinyint(1) NOT NULL,
-  PRIMARY KEY (`id_alergen`)
+  PRIMARY KEY (`AllergenId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Referensi zat alergen';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `allergy`
+--
+
+DROP TABLE IF EXISTS `allergy`;
+CREATE TABLE IF NOT EXISTS `allergy` (
+  `allergyId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `patientId` int UNSIGNED NOT NULL COMMENT 'Dari tabel patient',
+  `encounterId` int UNSIGNED NOT NULL COMMENT 'Dari tabel encounter',
+  `medicalPersonelId` int UNSIGNED NOT NULL COMMENT 'Tenaga medis yang menyatakan diagnosa ',
+  `satuSehatCode` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'ID Allergy Intolerance dari SATUSEHAT',
+  `allergenCategory` enum('Food','Medication','Environment','Biologic') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Kategori Alergen',
+  `allergenName` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Nama zat penyebab alergi',
+  `allergenCode` varchar(50) NOT NULL COMMENT 'Kode Alergen dari SNOMED',
+  `allergenDisplay` varchar(255) NOT NULL COMMENT 'Nama alergen berdasarkan SNOMED',
+  `allergenSystem` varchar(255) NOT NULL DEFAULT 'http://snomed.info/sct' COMMENT 'System yang digunakan http://snomed.info/sct',
+  `clinicalStatus` enum('active','inactive','resolved') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Status Klinis',
+  `verificationStatus` enum('unconfirmed','presumed','confirmed','refuted','entered-in-error') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Status proses verifikasi',
+  `allergyDescription` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT 'Keterangan, reaksi yang dialamai pasien',
+  `creatBy` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
+  `updateBy` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
+  `creatAt` datetime NOT NULL COMMENT 'Timezone UTC',
+  `updateAt` datetime NOT NULL COMMENT 'Timezone UTC',
+  PRIMARY KEY (`allergyId`),
+  KEY `id_pasien` (`patientId`),
+  KEY `id_kunjungan` (`encounterId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Riwayat alergi pasien';
 
 -- --------------------------------------------------------
 
@@ -190,25 +220,135 @@ CREATE TABLE IF NOT EXISTS `body_site` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `diagnosis`
+--
+
+DROP TABLE IF EXISTS `diagnosis`;
+CREATE TABLE IF NOT EXISTS `diagnosis` (
+  `diagnosisId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `encounterId` int UNSIGNED NOT NULL COMMENT 'dari tabel encounter',
+  `patientId` int UNSIGNED NOT NULL COMMENT 'dari tabel patient',
+  `idCondition` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Resource Condition Satusehat',
+  `medicalPersonelId` int UNSIGNED DEFAULT NULL COMMENT 'ID Dokter Yang Menyatakan',
+  `category` enum('Admission','Provisional','Primary','Secondary','Working','Differential','Final') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Masuk, Awal, Utama, ',
+  `icdVersion` enum('ICD9','ICD10','ICD11') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Versi yang digunakan',
+  `icdCode` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Kode ICD',
+  `icdDescription` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Deskripsi Diagnosis',
+  `diagnosisText` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT 'text bebas dari pernyataan dokter',
+  `caseStatus` enum('Baru','Lama','Kambuh','Kronis') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Status kasus',
+  `certaintyStatus` enum('Provisional','Final') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Status kepastian : Sementara, Tetap (selesai)',
+  `creatAt` datetime NOT NULL COMMENT 'Timezone UTC',
+  `updateAt` datetime NOT NULL COMMENT 'Timezone UTC',
+  `creatBy` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
+  `updateBy` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
+  PRIMARY KEY (`diagnosisId`),
+  KEY `id_kunjungan` (`encounterId`),
+  KEY `id_pasien` (`patientId`),
+  KEY `dokter_id` (`medicalPersonelId`),
+  KEY `id_condition` (`idCondition`),
+  KEY `diagnosis_akses` (`creatBy`),
+  KEY `diagnosis_to_account_2` (`updateBy`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Data diagnosis pasien';
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `encounter`
 --
 
 DROP TABLE IF EXISTS `encounter`;
 CREATE TABLE IF NOT EXISTS `encounter` (
   `encounterId` int UNSIGNED NOT NULL AUTO_INCREMENT,
-  `id_encounter` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-  `registrationCode` varchar(15) DEFAULT NULL,
-  `registrationDate` datetime DEFAULT NULL,
-  `patientId` int UNSIGNED NOT NULL,
-  `destination` int DEFAULT NULL,
-  `room` int DEFAULT NULL,
-  `status` varchar(20) DEFAULT NULL,
-  `createdBy` int DEFAULT NULL,
-  `createdDate` datetime DEFAULT NULL,
-  `updatedBy` int DEFAULT NULL,
-  `updatedDate` datetime DEFAULT NULL,
+  `EncounterCode` varchar(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Kode Lokal Kunjungan',
+  `satuSehatCode` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'ID Encounter Dari SATUSEHAT',
+  `registrationDatetime` datetime DEFAULT NULL COMMENT 'Tanggal & Jam Pendaftaran (timezone UTC)',
+  `patientId` int UNSIGNED NOT NULL COMMENT 'Dari tabel patient',
+  `reasonForVisit` varchar(100) NOT NULL DEFAULT 'Berobat' COMMENT 'Latar belakang kunjungan : Berobat, Kontrol, MCU, Imunisasi, Konsultasi',
+  `chiefComplaint` text COMMENT 'Keluhan Utama misalnya : Batuk Pilek, Demam 2 hari, Sakit kepala, dll',
+  `priority` enum('R','UR','EM','EL') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Prioritas pelayanan (http://terminology.hl7.org/CodeSystem/v3-ActPriority)',
+  `destination` enum('AMB','IMP','EMER','OBSENC','VR','HH') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Tujuan kunjungan (http://terminology.hl7.org/CodeSystem/v3-ActCode)',
+  `polyclinicId` int UNSIGNED DEFAULT NULL COMMENT 'ID Poliklinik dari tabel polyclinic',
+  `inpatientClassId` int UNSIGNED DEFAULT NULL COMMENT 'Kelas Rawat Inap dari tabel inpatient_class',
+  `inpatientRoomId` int UNSIGNED DEFAULT NULL COMMENT 'Ruang Rawat Inap Dari Tabel inpatient_room',
+  `inpatientBedId` int UNSIGNED DEFAULT NULL COMMENT 'Kode Tempat Tidur Dari tabel inpatient_bed',
+  `assurance` tinyint(1) DEFAULT NULL COMMENT '0: Umum | 1: Asuransi',
+  `assuranceName` varchar(100) DEFAULT NULL COMMENT 'Nama paket asuransi (Contoh : BPJS PBI, Alianz, Prudential)',
+  `assuranceNumber` varchar(50) DEFAULT NULL COMMENT 'Nomor Asuransi',
+  `emergencyContactName` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Nama kerabat untuk kontak darurat',
+  `emergencyContactPhone` varchar(20) DEFAULT NULL COMMENT 'Nomor kontak kerabat untuk kontak darurat',
+  `status` enum('planned','arrived','triaged','in-progress','onleave','finished','cancelled','entered-in-error','unknown') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'planned' COMMENT 'Status kunjungan pasien',
+  `creatAt` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
+  `updateAt` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
+  `creatBy` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Timezone UTC',
+  `updateBy` datetime DEFAULT NULL COMMENT 'Timezone UTCTimezone UTCTimezone UTC',
   PRIMARY KEY (`encounterId`),
+  UNIQUE KEY `EncounterCode` (`EncounterCode`),
   KEY `encounter_to_patient` (`patientId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `encounter_performer`
+--
+
+DROP TABLE IF EXISTS `encounter_performer`;
+CREATE TABLE IF NOT EXISTS `encounter_performer` (
+  `encounterPerformerId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `encounterId` int UNSIGNED NOT NULL COMMENT 'ID Kunjungan dari tabel encounter',
+  `performerType` enum('ATND','CON','REF','ADM','DIS') NOT NULL COMMENT 'Tipe performer, tipe peran serta tenaga kesehatan',
+  `medicalPersonelId` int UNSIGNED NOT NULL COMMENT 'Tenaga kesehatan dari tabel medical_personel ',
+  PRIMARY KEY (`encounterPerformerId`),
+  KEY `performer_to_encounter` (`encounterId`),
+  KEY `performer_to_medical_personel` (`medicalPersonelId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Tenaga kesehatan yang terlibat dalam pelayanan kunjungan pasien';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `encounter_status`
+--
+
+DROP TABLE IF EXISTS `encounter_status`;
+CREATE TABLE IF NOT EXISTS `encounter_status` (
+  `encounterStatusId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `encounterId` int UNSIGNED NOT NULL COMMENT 'Dari tabel encounter',
+  `encounterStatus` enum('planned','arrived','triaged','in-progress','onleave','finished','cancelled','entered-in-error','unknown') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Status kunjungan pasien',
+  `updateAt` datetime NOT NULL COMMENT 'Timezone UTC',
+  `updateBy` int UNSIGNED NOT NULL COMMENT 'dari tabel account',
+  PRIMARY KEY (`encounterStatusId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Riwayat perubahan status pelayanan kunjungan';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `general_consent`
+--
+
+DROP TABLE IF EXISTS `general_consent`;
+CREATE TABLE IF NOT EXISTS `general_consent` (
+  `id_general_consent` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `id_consent` varchar(255) NOT NULL COMMENT 'SATUSEHAT',
+  `id_kunjungan` int UNSIGNED NOT NULL,
+  `id_pasien` int UNSIGNED NOT NULL,
+  `metode_consent` enum('Manual','Digital') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Manual (Cetak), Digital (Signature)',
+  `petugas_edukasi_id` int UNSIGNED DEFAULT NULL COMMENT 'ID Akses Petugas',
+  `petugas_edukasi_nama` varchar(255) NOT NULL COMMENT 'Nama Petugas (text)',
+  `petugas_edukasi_nik` varchar(255) DEFAULT NULL COMMENT 'Dari tabel akses',
+  `petugas_edukasi_ttd` longtext COMMENT 'bas64',
+  `penandatangan_tipe` enum('Pasien','Keluarga','Penanggung Jawab') NOT NULL,
+  `penandatangan_nama` varchar(255) NOT NULL,
+  `penandatangan_nik` varchar(255) DEFAULT NULL COMMENT 'Jika pasien maka dari tabel ''Pasien''',
+  `penandatangan_ttd` longtext,
+  `policy_rule` enum('opt-in','opt-out') NOT NULL,
+  `pernyataan_pasien` json NOT NULL,
+  `status` tinyint(1) NOT NULL,
+  `datetime_creat` datetime NOT NULL,
+  `datetime_update` datetime NOT NULL,
+  PRIMARY KEY (`id_general_consent`),
+  KEY `id_kunjungan` (`id_kunjungan`),
+  KEY `id_pasien` (`id_pasien`),
+  KEY `petugas_edukasi_id` (`petugas_edukasi_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
@@ -228,6 +368,78 @@ CREATE TABLE IF NOT EXISTS `icd` (
   UNIQUE KEY `kode_2` (`kode`),
   KEY `kode` (`kode`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `inpatient_bed`
+--
+
+DROP TABLE IF EXISTS `inpatient_bed`;
+CREATE TABLE IF NOT EXISTS `inpatient_bed` (
+  `inpatientBedId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `inpatientClassId` int UNSIGNED NOT NULL COMMENT 'Dari tabel inpatient_class',
+  `inpatientRoomId` int UNSIGNED NOT NULL COMMENT 'Dari tabel inpatient_room',
+  `inpatientBedCode` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Kode lokal tempat tidur',
+  `satuSehatCode` varchar(50) NOT NULL COMMENT 'ID Location dari satusehat',
+  `genderPolicy` enum('Male','Female','Unisex') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'Unisex' COMMENT 'kebijakan penggunaan tempat tidur berdasarkan jenis kelamin pasien',
+  `status` tinyint(1) DEFAULT NULL COMMENT '0 : Inactive | 1 : Active',
+  `creatAt` datetime NOT NULL COMMENT 'Timezone UTC',
+  `updateAt` datetime DEFAULT NULL COMMENT 'Timezone UTC',
+  `creatBy` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
+  `updateBy` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
+  PRIMARY KEY (`inpatientBedId`),
+  KEY `tt_to_kelas` (`inpatientClassId`),
+  KEY `tt_to_ruang_rawat` (`inpatientRoomId`),
+  KEY `bed_to_account_1` (`creatBy`),
+  KEY `bed_to_account_2` (`updateBy`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Tempat Tidur';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `inpatient_class`
+--
+
+DROP TABLE IF EXISTS `inpatient_class`;
+CREATE TABLE IF NOT EXISTS `inpatient_class` (
+  `inpatientClassId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `inpatientClassCode` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Kode Kelas Secara lokal',
+  `satuSehatCode` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'ID Location dari satusehat platform',
+  `inpatientClassName` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Nama kelas',
+  `status` tinyint(1) NOT NULL COMMENT '0 : Inactive | 1 : Active',
+  `creatAt` datetime NOT NULL COMMENT 'Timezone UTC',
+  `updatedAt` datetime DEFAULT NULL COMMENT 'Timezone UTC',
+  `creatBy` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
+  `updateBy` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
+  PRIMARY KEY (`inpatientClassId`),
+  KEY `inpatient_class_to_account_1` (`creatBy`),
+  KEY `inpatient_class_to_account_2` (`updateBy`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Kelas Inap';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `inpatient_room`
+--
+
+DROP TABLE IF EXISTS `inpatient_room`;
+CREATE TABLE IF NOT EXISTS `inpatient_room` (
+  `inpatientRoomId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `inpatientClassId` int UNSIGNED NOT NULL COMMENT 'dari tabel inpatient_class',
+  `inpatientRoomCode` varchar(20) NOT NULL COMMENT 'Kode ruangan secara lokal',
+  `satuSehatCode` varchar(50) DEFAULT NULL COMMENT 'ID Location dari satusehat',
+  `inpatientRoomName` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Nama ruangan',
+  `status` tinyint(1) NOT NULL COMMENT '0 : Inactive | 1 : Active',
+  `creatAt` datetime NOT NULL COMMENT 'Timezone UTC ',
+  `updateAt` datetime NOT NULL COMMENT 'Timezone UTC',
+  `creatBy` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
+  `updateBy` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
+  PRIMARY KEY (`inpatientRoomId`),
+  KEY `ruang_to_kelas` (`inpatientClassId`),
+  KEY `inpatient_room_to_account_1` (`creatBy`),
+  KEY `inpatient_room_to_account_2` (`updateBy`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Ruang Inap';
 
 -- --------------------------------------------------------
 
@@ -280,18 +492,16 @@ CREATE TABLE IF NOT EXISTS `medical_personel` (
 DROP TABLE IF EXISTS `patient`;
 CREATE TABLE IF NOT EXISTS `patient` (
   `patientId` int UNSIGNED NOT NULL AUTO_INCREMENT,
-  `noMedicalRecord` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
-  `satuSehatCode` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'id_patient dari Satusehat',
+  `noMedicalRecord` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Nomor RM lokal sesuai faskes',
+  `satuSehatCode` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'IHS Pasien Dari SATUSEHAT',
+  `isInfant` tinyint(1) DEFAULT '0' COMMENT '1 : Bayi | 0: Bukan',
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Nama lengkap pasien sesuai KTP, Jika bayi bisa diisi dengan nama ibu',
   `email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Alamat email',
-  `phone` varchar(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'kontak pasien',
-  `gender` enum('1','2') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '1: Male | 2: Female',
+  `phone` varchar(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Nomor Kontak Pasien',
+  `gender` enum('Male','Female') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Male Or Female',
   `birthPlace` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Tempat lahir',
-  `birthDate` date DEFAULT NULL COMMENT 'tanggal lahir',
+  `birthDate` date DEFAULT NULL COMMENT 'Tanggal Lahir',
   `nik` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Nomor KTP',
-  `assurance` tinyint(1) DEFAULT NULL COMMENT '1: Asuransi, 0: Umum',
-  `assuranceNumber` varchar(50) DEFAULT NULL COMMENT 'Apabila status assurance true maka ini wajib diisi',
-  `motherName` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Nama Ibu (Untuk pasien bayi)',
   `religion` enum('Islam','Kristen Protestan','Kristen Katolik','Hindu','Buddha','Konghucu','Lainnya') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Agama yang dianut',
   `martialStatus` enum('Single','Married','Widowed','Divorced') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Status pernikahan',
   `lastEducation` enum('Tidak Sekolah','SD','SMP','SMA','D1','D2','D3','D4','S1','S2','S3') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Pendidikan Terakhir',
@@ -307,22 +517,24 @@ CREATE TABLE IF NOT EXISTS `patient` (
   `rw` varchar(3) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'RW',
   `postalCode` varchar(5) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Kode Pos',
   `address` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT 'Alamat lengkap, Jalan, Nomor dll',
-  `status` enum('Terdaftar','Meninggal','Retensi','Dihapus') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'Terdaftar' COMMENT 'Status data RM pasien',
-  `syncStatus` tinyint(1) NOT NULL COMMENT '0: Tidak | 1: Sinkron',
-  `createdBy` int UNSIGNED NOT NULL COMMENT 'Account Yang Insert',
-  `createdDate` datetime NOT NULL COMMENT 'Tanggal Jam Data di insert',
-  `updatedBy` int UNSIGNED NOT NULL COMMENT 'Account yang Update',
-  `updatedDate` datetime NOT NULL COMMENT 'Tanggal Jam Data di update',
+  `medicalRecordStatus` enum('Terdaftar','Meninggal','Retensi') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'Terdaftar' COMMENT 'Status data RM pasien',
   `oldMedicalRecord` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'No RM lama',
-  `kkNumber` varchar(16) DEFAULT NULL,
-  `kkName` varchar(50) DEFAULT NULL,
+  `motherMedicalRecord` varchar(20) DEFAULT NULL COMMENT 'No RM Ibu (jika bayi)',
+  `kkNumber` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Nomor Kartu keluarga',
+  `kkName` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Nama kepala keluarga',
   `photo` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Foto-Filename+Ext',
+  `creatBy` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
+  `updateBy` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
+  `creatAt` datetime NOT NULL COMMENT 'Timezone UTC',
+  `updateAt` datetime NOT NULL COMMENT 'Timezone UTC',
   PRIMARY KEY (`patientId`),
   UNIQUE KEY `noMedicalRecord` (`noMedicalRecord`),
   KEY `patient_to_region_province` (`provinceId`),
   KEY `patient_to_region_city` (`cityId`),
   KEY `patient_to_region_district` (`districtId`),
-  KEY `patient_to_region_vilage` (`villageId`)
+  KEY `patient_to_region_vilage` (`villageId`),
+  KEY `patient_to_account_1` (`creatBy`),
+  KEY `patient_to_account_2` (`updateBy`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Data master pasien';
 
 -- --------------------------------------------------------
@@ -346,6 +558,87 @@ CREATE TABLE IF NOT EXISTS `polyclinic` (
   KEY `updateby_to_account` (`updatedBy`),
   KEY `createdby_to_account` (`createdBy`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Master Poliklinik';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `procedure_encounter`
+--
+
+DROP TABLE IF EXISTS `procedure_encounter`;
+CREATE TABLE IF NOT EXISTS `procedure_encounter` (
+  `procedureId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `patientId` int UNSIGNED NOT NULL COMMENT 'Dari tabel patient',
+  `encounterId` int UNSIGNED NOT NULL COMMENT 'Dari tabel encounter',
+  `satusehatCode` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Procedure ID from SATUSEHAT',
+  `procedureStart` datetime NOT NULL COMMENT 'Start Procedure (UTC)',
+  `procedureEnd` datetime DEFAULT NULL COMMENT 'End Procedure (UTC)',
+  `resonReference` enum('ICD10','ICD11') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Versi ICD yang digunakan untuk resonCode',
+  `resonCode` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Kode ICD10 - Alasan tindakan',
+  `resonDisplay` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Description ICD10 - Alasan tindakan',
+  `postProcedure` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT 'Keterangan/Catatan kondisi setelah tindakan',
+  `creatAt` datetime NOT NULL COMMENT 'Timezone UTC',
+  `creatBy` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
+  `updateAt` datetime NOT NULL COMMENT 'Timezone UTC',
+  `updateBy` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
+  PRIMARY KEY (`procedureId`),
+  KEY `id_pasien` (`patientId`),
+  KEY `id_kunjungan` (`encounterId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Data tindakan yang diberikan kepada pasien';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `procedure_performer`
+--
+
+DROP TABLE IF EXISTS `procedure_performer`;
+CREATE TABLE IF NOT EXISTS `procedure_performer` (
+  `procedurePerformerId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `id_tindakan` int UNSIGNED NOT NULL COMMENT 'Dari tabel tindakan',
+  `id_praktisi` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel praktisi',
+  `performer_type` enum('Utama','Pendamping') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `performer_ihs` varchar(255) DEFAULT NULL COMMENT 'ID Practitioner Pelaksana (SATUSEHAT)',
+  `performer_nik` varchar(255) DEFAULT NULL COMMENT 'NIK Pelaksana',
+  `performer_nama` varchar(255) NOT NULL COMMENT 'Nama lengkap pelaksana',
+  `performer_notes` text COMMENT 'Catatan dari performer',
+  PRIMARY KEY (`procedurePerformerId`),
+  KEY `id_tindakan` (`id_tindakan`),
+  KEY `id_praktisi` (`id_praktisi`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Untuk mencatat siapa saja yang terlibat dalam tindakan';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `procedure_reference`
+--
+
+DROP TABLE IF EXISTS `procedure_reference`;
+CREATE TABLE IF NOT EXISTS `procedure_reference` (
+  `procedureReferenceId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `procedureCategoryName` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Kelompok tindakan, Jenis tindakan dalam istilah lokal',
+  `procedureCategoryCode` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'kode kategori SNOMED',
+  `procedureCategoryDipsplay` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Desktipsi kategori SNOMED',
+  `procedureCategorySystem` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT 'http://snomed.info/sct ' COMMENT 'http://snomed.info/sct',
+  `procedureName` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Nama tindakan dalam istilah lokal',
+  `procedureCode` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Kode Tindakan (berdasarkan SNOMED)',
+  `procedureDisplay` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'NamaTindakan (berdasarkan SNOMED)',
+  `procedureSystem` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT 'http://snomed.info/sct' COMMENT 'Sistem Yang Digunakan (http://snomed.info/sct)',
+  `bodySiteName` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Nama Lokasi tubuh (Secara Lokal)',
+  `bodySiteCode` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Kode lokasi tubuh (berdasarkan SNOMED)(SNOMED)',
+  `bodySiteDisplay` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'nama lokasi tubuh (berdasarkan SNOMED)',
+  `bodySiteSystem` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT 'http://snomed.info/sct' COMMENT 'Sistem yang digunakan',
+  `icd9Code` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'kode ICD9',
+  `icd9Description` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Deskripsi ICD9',
+  `status` tinyint(1) NOT NULL COMMENT '0 : Deleted | 1 : Active',
+  `creatAt` datetime DEFAULT NULL COMMENT 'Timezone UTC',
+  `updateAt` datetime DEFAULT NULL COMMENT 'Timezone UTC',
+  `creatBy` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
+  `updateBy` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
+  PRIMARY KEY (`procedureReferenceId`),
+  KEY `procedure_reference_to_account_1` (`creatBy`),
+  KEY `procedure_reference_to_account_2` (`updateBy`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Mencatat referensi tindakan';
 
 -- --------------------------------------------------------
 
@@ -453,6 +746,27 @@ CREATE TABLE IF NOT EXISTS `satusehat` (
   `updatedDate` datetime DEFAULT NULL,
   PRIMARY KEY (`credentialId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Menyimpan credential satusehat';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `schedule`
+--
+
+DROP TABLE IF EXISTS `schedule`;
+CREATE TABLE IF NOT EXISTS `schedule` (
+  `id_jadwal` int NOT NULL AUTO_INCREMENT,
+  `id_dokter` int NOT NULL,
+  `id_poliklinik` int NOT NULL,
+  `dokter` varchar(100) CHARACTER SET latin1 NOT NULL,
+  `poliklinik` varchar(50) CHARACTER SET latin1 NOT NULL,
+  `hari` varchar(25) CHARACTER SET latin1 NOT NULL,
+  `jam` varchar(25) CHARACTER SET latin1 NOT NULL,
+  `kuota_non_jkn` int DEFAULT NULL,
+  `kuota_jkn` int DEFAULT NULL,
+  `time_max` int NOT NULL,
+  PRIMARY KEY (`id_jadwal`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Jadwal Dokter';
 
 -- --------------------------------------------------------
 
@@ -575,10 +889,51 @@ ALTER TABLE `body_site`
   ADD CONSTRAINT `body_site_to_account` FOREIGN KEY (`author_id`) REFERENCES `account` (`accountId`) ON DELETE SET NULL;
 
 --
+-- Constraints for table `diagnosis`
+--
+ALTER TABLE `diagnosis`
+  ADD CONSTRAINT `diagnosis_to_account_1` FOREIGN KEY (`creatBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `diagnosis_to_account_2` FOREIGN KEY (`updateBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `diagnosis_to_encounter` FOREIGN KEY (`encounterId`) REFERENCES `encounter` (`encounterId`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `diagnosis_to_medicalPersonel` FOREIGN KEY (`medicalPersonelId`) REFERENCES `medical_personel` (`medicalPersonelId`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `diagnosis_to_patient` FOREIGN KEY (`patientId`) REFERENCES `patient` (`patientId`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
 -- Constraints for table `encounter`
 --
 ALTER TABLE `encounter`
   ADD CONSTRAINT `encounter_to_patient` FOREIGN KEY (`patientId`) REFERENCES `patient` (`patientId`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `encounter_performer`
+--
+ALTER TABLE `encounter_performer`
+  ADD CONSTRAINT `performer_to_encounter` FOREIGN KEY (`encounterId`) REFERENCES `encounter` (`encounterId`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `performer_to_medical_personel` FOREIGN KEY (`medicalPersonelId`) REFERENCES `medical_personel` (`medicalPersonelId`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `inpatient_bed`
+--
+ALTER TABLE `inpatient_bed`
+  ADD CONSTRAINT `bed_to_account_1` FOREIGN KEY (`creatBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `bed_to_account_2` FOREIGN KEY (`updateBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `bed_to_class` FOREIGN KEY (`inpatientClassId`) REFERENCES `inpatient_class` (`inpatientClassId`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `bed_to_room` FOREIGN KEY (`inpatientRoomId`) REFERENCES `inpatient_room` (`inpatientRoomId`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `inpatient_class`
+--
+ALTER TABLE `inpatient_class`
+  ADD CONSTRAINT `inpatient_class_to_account_1` FOREIGN KEY (`creatBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `inpatient_class_to_account_2` FOREIGN KEY (`updateBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT;
+
+--
+-- Constraints for table `inpatient_room`
+--
+ALTER TABLE `inpatient_room`
+  ADD CONSTRAINT `inpatient_room_to_account_1` FOREIGN KEY (`creatBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `inpatient_room_to_account_2` FOREIGN KEY (`updateBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `room_to_class` FOREIGN KEY (`inpatientClassId`) REFERENCES `inpatient_class` (`inpatientClassId`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `medical_personel`
@@ -595,6 +950,8 @@ ALTER TABLE `medical_personel`
 -- Constraints for table `patient`
 --
 ALTER TABLE `patient`
+  ADD CONSTRAINT `patient_to_account_1` FOREIGN KEY (`creatBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `patient_to_account_2` FOREIGN KEY (`updateBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
   ADD CONSTRAINT `patient_to_region_city` FOREIGN KEY (`cityId`) REFERENCES `region_city` (`cityId`) ON DELETE SET NULL,
   ADD CONSTRAINT `patient_to_region_district` FOREIGN KEY (`districtId`) REFERENCES `region_district` (`districtId`) ON DELETE SET NULL ON UPDATE RESTRICT,
   ADD CONSTRAINT `patient_to_region_province` FOREIGN KEY (`provinceId`) REFERENCES `region_province` (`provinceId`) ON DELETE SET NULL,
@@ -606,6 +963,20 @@ ALTER TABLE `patient`
 ALTER TABLE `polyclinic`
   ADD CONSTRAINT `createdby_to_account` FOREIGN KEY (`createdBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
   ADD CONSTRAINT `updateby_to_account` FOREIGN KEY (`updatedBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT;
+
+--
+-- Constraints for table `procedure_encounter`
+--
+ALTER TABLE `procedure_encounter`
+  ADD CONSTRAINT `procedure_to_encounter` FOREIGN KEY (`encounterId`) REFERENCES `encounter` (`encounterId`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `procedure_to_patient` FOREIGN KEY (`patientId`) REFERENCES `patient` (`patientId`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `procedure_reference`
+--
+ALTER TABLE `procedure_reference`
+  ADD CONSTRAINT `procedure_reference_to_account_1` FOREIGN KEY (`creatBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `procedure_reference_to_account_2` FOREIGN KEY (`updateBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT;
 
 --
 -- Constraints for table `region_city`
