@@ -1,0 +1,60 @@
+{
+    "resourceType": "Encounter",
+    "identifier": [
+        {
+            "system": "http:\/\/sys-ids.kemkes.go.id\/encounter",
+            "value": "smoyn620SgbmaMId"
+        }
+    ],
+    "status": "arrived",
+    "class": {
+        "system": "http:\/\/terminology.hl7.org\/CodeSystem\/v3-ActCode",
+        "code": "AMB"
+    },
+    "subject": {
+        "reference": "Patient\/P02029532770"
+    },
+    "participant": [
+        {
+            "type": [
+                {
+                    "coding": [
+                        {
+                            "system": "http:\/\/terminology.hl7.org\/CodeSystem\/v3-ParticipationType",
+                            "code": "ATND"
+                        }
+                    ]
+                }
+            ],
+            "individual": {
+                "reference": "Practitioner\/10009880728"
+            }
+        }
+    ],
+    "period": {
+        "start": "2026-07-22T03:00:00Z"
+    },
+    "reasonCode": [
+        {
+            "text": "Berobat"
+        }
+    ],
+    "serviceProvider": {
+        "reference": "Organization\/ecbd3cb9-cc2a-4387-81dd-2fa286de1e3a"
+    },
+    "statusHistory": [
+        {
+            "status": "arrived",
+            "period": {
+                "start": "2026-07-22T03:00:00Z"
+            }
+        }
+    ],
+    "location": [
+        {
+            "location": {
+                "reference": "Location\/43912d5e-eae9-47e3-8faa-60e3d83de124"
+            }
+        }
+    ]
+}
