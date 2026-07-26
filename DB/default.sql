@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Jul 22, 2026 at 06:34 PM
+-- Generation Time: Jul 26, 2026 at 11:09 AM
 -- Server version: 9.1.0
 -- PHP Version: 7.4.33
 
@@ -117,16 +117,18 @@ CREATE TABLE IF NOT EXISTS `account_token` (
 DROP TABLE IF EXISTS `allergen`;
 CREATE TABLE IF NOT EXISTS `allergen` (
   `AllergenId` int UNSIGNED NOT NULL AUTO_INCREMENT,
-  `category` enum('Food','Medication','Environment','Biologic') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Kategori Alergen',
-  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Nama Alergen',
-  `code_alergen` varchar(255) DEFAULT NULL,
-  `display_alergen` varchar(255) DEFAULT NULL,
-  `system_alergen` text COMMENT 'http://snomed.info/sct',
-  `author_id` int UNSIGNED DEFAULT NULL COMMENT 'ID akses pembuat',
-  `author_name` varchar(255) NOT NULL COMMENT 'Nama pembuat',
-  `datetime_creat` timestamp NOT NULL,
-  `status` tinyint(1) NOT NULL,
-  PRIMARY KEY (`AllergenId`)
+  `allergenCategory` enum('Food','Medication','Environment','Biologic') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Kategori Alergen',
+  `allergenName` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Nama Alergen',
+  `allergenCode` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Kode Alergen Berdasarakn Sistem Referensi yang Digunakan',
+  `allergenDisplay` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Text tampilan nama alergen berdasarkan sistem referensi',
+  `allergenSystem` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT 'http://snomed.info/sct',
+  `creatAt` datetime NOT NULL COMMENT 'Timezone UTC',
+  `updateAt` datetime NOT NULL COMMENT 'Timezone UTC',
+  `creatBy` int UNSIGNED DEFAULT NULL COMMENT 'Dari tabel account',
+  `updateBy` int UNSIGNED DEFAULT NULL COMMENT 'Dari tabel account',
+  PRIMARY KEY (`AllergenId`),
+  KEY `allergen_to_account_1` (`creatBy`),
+  KEY `allergen_to_account_2` (`updateBy`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Referensi zat alergen';
 
 -- --------------------------------------------------------
@@ -140,13 +142,13 @@ CREATE TABLE IF NOT EXISTS `allergy` (
   `allergyId` int UNSIGNED NOT NULL AUTO_INCREMENT,
   `patientId` int UNSIGNED NOT NULL COMMENT 'Dari tabel patient',
   `encounterId` int UNSIGNED NOT NULL COMMENT 'Dari tabel encounter',
-  `medicalPersonelId` int UNSIGNED NOT NULL COMMENT 'Tenaga medis yang menyatakan diagnosa ',
+  `medicalPersonelId` int UNSIGNED DEFAULT NULL COMMENT 'Tenaga medis yang menyatakan diagnosa ',
   `satuSehatCode` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'ID Allergy Intolerance dari SATUSEHAT',
   `allergenCategory` enum('Food','Medication','Environment','Biologic') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Kategori Alergen',
   `allergenName` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Nama zat penyebab alergi',
   `allergenCode` varchar(50) NOT NULL COMMENT 'Kode Alergen dari SNOMED',
   `allergenDisplay` varchar(255) NOT NULL COMMENT 'Nama alergen berdasarkan SNOMED',
-  `allergenSystem` varchar(255) NOT NULL DEFAULT 'http://snomed.info/sct' COMMENT 'System yang digunakan http://snomed.info/sct',
+  `allergenSystem` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'System yang digunakan http://snomed.info/sct',
   `clinicalStatus` enum('active','inactive','resolved') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Status Klinis',
   `verificationStatus` enum('unconfirmed','presumed','confirmed','refuted','entered-in-error') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Status proses verifikasi',
   `allergyDescription` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT 'Keterangan, reaksi yang dialamai pasien',
@@ -156,7 +158,10 @@ CREATE TABLE IF NOT EXISTS `allergy` (
   `updateAt` datetime NOT NULL COMMENT 'Timezone UTC',
   PRIMARY KEY (`allergyId`),
   KEY `id_pasien` (`patientId`),
-  KEY `id_kunjungan` (`encounterId`)
+  KEY `id_kunjungan` (`encounterId`),
+  KEY `allergy_to_medical_personel` (`medicalPersonelId`),
+  KEY `allergy_to_account_1` (`creatBy`),
+  KEY `allergy_to_account_2` (`updateBy`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Riwayat alergi pasien';
 
 -- --------------------------------------------------------
@@ -259,7 +264,7 @@ CREATE TABLE IF NOT EXISTS `diagnosis` (
 DROP TABLE IF EXISTS `encounter`;
 CREATE TABLE IF NOT EXISTS `encounter` (
   `encounterId` int UNSIGNED NOT NULL AUTO_INCREMENT,
-  `EncounterCode` varchar(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Kode Lokal Kunjungan',
+  `EncounterCode` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Kode Lokal Kunjungan',
   `satuSehatCode` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'ID Encounter Dari SATUSEHAT',
   `registrationDatetime` datetime DEFAULT NULL COMMENT 'Tanggal & Jam Pendaftaran (timezone UTC)',
   `patientId` int UNSIGNED NOT NULL COMMENT 'Dari tabel patient',
@@ -277,13 +282,19 @@ CREATE TABLE IF NOT EXISTS `encounter` (
   `emergencyContactName` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Nama kerabat untuk kontak darurat',
   `emergencyContactPhone` varchar(20) DEFAULT NULL COMMENT 'Nomor kontak kerabat untuk kontak darurat',
   `status` enum('planned','arrived','triaged','in-progress','onleave','finished','cancelled','entered-in-error','unknown') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'planned' COMMENT 'Status kunjungan pasien',
-  `creatAt` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
-  `updateAt` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
-  `creatBy` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Timezone UTC',
-  `updateBy` datetime DEFAULT NULL COMMENT 'Timezone UTCTimezone UTCTimezone UTC',
+  `creatAt` datetime NOT NULL COMMENT 'Timezone UTC',
+  `updateAt` datetime NOT NULL COMMENT 'Timezone UTC',
+  `creatBy` int UNSIGNED DEFAULT NULL COMMENT 'Dari tabel account',
+  `updateBy` int UNSIGNED DEFAULT NULL COMMENT 'Dari tabel account',
   PRIMARY KEY (`encounterId`),
   UNIQUE KEY `EncounterCode` (`EncounterCode`),
-  KEY `encounter_to_patient` (`patientId`)
+  KEY `encounter_to_patient` (`patientId`),
+  KEY `encounter_to_polyclinic` (`polyclinicId`),
+  KEY `encounter_to_inpatient_class` (`inpatientClassId`),
+  KEY `encounter_to_inpatient_room` (`inpatientRoomId`),
+  KEY `encounter_to_inpatient_bed` (`inpatientBedId`),
+  KEY `encounter_to_account_1` (`creatBy`),
+  KEY `encounter_to_account_2` (`updateBy`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
@@ -298,9 +309,12 @@ CREATE TABLE IF NOT EXISTS `encounter_performer` (
   `encounterId` int UNSIGNED NOT NULL COMMENT 'ID Kunjungan dari tabel encounter',
   `performerType` enum('ATND','CON','REF','ADM','DIS') NOT NULL COMMENT 'Tipe performer, tipe peran serta tenaga kesehatan',
   `medicalPersonelId` int UNSIGNED NOT NULL COMMENT 'Tenaga kesehatan dari tabel medical_personel ',
+  `updateAt` datetime NOT NULL COMMENT 'Timezone UTC',
+  `updateBy` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
   PRIMARY KEY (`encounterPerformerId`),
   KEY `performer_to_encounter` (`encounterId`),
-  KEY `performer_to_medical_personel` (`medicalPersonelId`)
+  KEY `performer_to_medical_personel` (`medicalPersonelId`),
+  KEY `performer_to_account` (`updateBy`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Tenaga kesehatan yang terlibat dalam pelayanan kunjungan pasien';
 
 -- --------------------------------------------------------
@@ -315,8 +329,10 @@ CREATE TABLE IF NOT EXISTS `encounter_status` (
   `encounterId` int UNSIGNED NOT NULL COMMENT 'Dari tabel encounter',
   `encounterStatus` enum('planned','arrived','triaged','in-progress','onleave','finished','cancelled','entered-in-error','unknown') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Status kunjungan pasien',
   `updateAt` datetime NOT NULL COMMENT 'Timezone UTC',
-  `updateBy` int UNSIGNED NOT NULL COMMENT 'dari tabel account',
-  PRIMARY KEY (`encounterStatusId`)
+  `updateBy` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
+  PRIMARY KEY (`encounterStatusId`),
+  KEY `status_to_encounter` (`encounterId`),
+  KEY `encounter_status_to_account` (`updateBy`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Riwayat perubahan status pelayanan kunjungan';
 
 -- --------------------------------------------------------
@@ -755,17 +771,21 @@ CREATE TABLE IF NOT EXISTS `satusehat` (
 
 DROP TABLE IF EXISTS `schedule`;
 CREATE TABLE IF NOT EXISTS `schedule` (
-  `id_jadwal` int NOT NULL AUTO_INCREMENT,
-  `id_dokter` int NOT NULL,
-  `id_poliklinik` int NOT NULL,
-  `dokter` varchar(100) CHARACTER SET latin1 NOT NULL,
-  `poliklinik` varchar(50) CHARACTER SET latin1 NOT NULL,
-  `hari` varchar(25) CHARACTER SET latin1 NOT NULL,
-  `jam` varchar(25) CHARACTER SET latin1 NOT NULL,
-  `kuota_non_jkn` int DEFAULT NULL,
-  `kuota_jkn` int DEFAULT NULL,
-  `time_max` int NOT NULL,
-  PRIMARY KEY (`id_jadwal`)
+  `scheduleId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `medicalPersonelId` int UNSIGNED NOT NULL COMMENT 'Dari tabel medical_personel',
+  `polyclinicId` int UNSIGNED NOT NULL COMMENT 'dari tabel polyclinic',
+  `dayName` enum('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Nama hari',
+  `timeStart` time NOT NULL COMMENT 'Jam mulai',
+  `timeFinish` time NOT NULL COMMENT 'Jam selesai',
+  `quotaAssurance` int UNSIGNED DEFAULT NULL COMMENT 'Kuota asuransi/BPJS',
+  `quotaGeneral` int UNSIGNED DEFAULT NULL COMMENT 'Kuota asuransi/Umum',
+  `creatAt` datetime NOT NULL COMMENT 'Timezone UTC',
+  `updateAt` datetime NOT NULL COMMENT 'Timezone UTC',
+  `creatBy` int UNSIGNED DEFAULT NULL COMMENT 'Dari tabel account',
+  `updateBy` int UNSIGNED DEFAULT NULL COMMENT 'Dari tabel account',
+  PRIMARY KEY (`scheduleId`),
+  KEY `schedule_to_medical_personel` (`medicalPersonelId`),
+  KEY `schedule_to_polyclinic` (`polyclinicId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Jadwal Dokter';
 
 -- --------------------------------------------------------
@@ -877,6 +897,23 @@ ALTER TABLE `account_token`
   ADD CONSTRAINT `account_token_to_account` FOREIGN KEY (`accountId`) REFERENCES `account` (`accountId`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
+-- Constraints for table `allergen`
+--
+ALTER TABLE `allergen`
+  ADD CONSTRAINT `allergen_to_account_1` FOREIGN KEY (`creatBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `allergen_to_account_2` FOREIGN KEY (`updateBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT;
+
+--
+-- Constraints for table `allergy`
+--
+ALTER TABLE `allergy`
+  ADD CONSTRAINT `allergy_to_account_1` FOREIGN KEY (`creatBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `allergy_to_account_2` FOREIGN KEY (`updateBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `allergy_to_encounter` FOREIGN KEY (`encounterId`) REFERENCES `encounter` (`encounterId`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `allergy_to_medical_personel` FOREIGN KEY (`medicalPersonelId`) REFERENCES `medical_personel` (`medicalPersonelId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `allergy_to_patient` FOREIGN KEY (`patientId`) REFERENCES `patient` (`patientId`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
 -- Constraints for table `api_token`
 --
 ALTER TABLE `api_token`
@@ -902,14 +939,28 @@ ALTER TABLE `diagnosis`
 -- Constraints for table `encounter`
 --
 ALTER TABLE `encounter`
-  ADD CONSTRAINT `encounter_to_patient` FOREIGN KEY (`patientId`) REFERENCES `patient` (`patientId`) ON DELETE CASCADE ON UPDATE CASCADE;
+  ADD CONSTRAINT `encounter_to_account_1` FOREIGN KEY (`creatBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `encounter_to_account_2` FOREIGN KEY (`updateBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `encounter_to_inpatient_bed` FOREIGN KEY (`inpatientBedId`) REFERENCES `inpatient_bed` (`inpatientBedId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `encounter_to_inpatient_class` FOREIGN KEY (`inpatientClassId`) REFERENCES `inpatient_class` (`inpatientClassId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `encounter_to_inpatient_room` FOREIGN KEY (`inpatientRoomId`) REFERENCES `inpatient_room` (`inpatientRoomId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `encounter_to_patient` FOREIGN KEY (`patientId`) REFERENCES `patient` (`patientId`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `encounter_to_polyclinic` FOREIGN KEY (`polyclinicId`) REFERENCES `polyclinic` (`polyclinicId`) ON DELETE SET NULL ON UPDATE RESTRICT;
 
 --
 -- Constraints for table `encounter_performer`
 --
 ALTER TABLE `encounter_performer`
+  ADD CONSTRAINT `performer_to_account` FOREIGN KEY (`updateBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
   ADD CONSTRAINT `performer_to_encounter` FOREIGN KEY (`encounterId`) REFERENCES `encounter` (`encounterId`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `performer_to_medical_personel` FOREIGN KEY (`medicalPersonelId`) REFERENCES `medical_personel` (`medicalPersonelId`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `encounter_status`
+--
+ALTER TABLE `encounter_status`
+  ADD CONSTRAINT `encounter_status_to_account` FOREIGN KEY (`updateBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `status_to_encounter` FOREIGN KEY (`encounterId`) REFERENCES `encounter` (`encounterId`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `inpatient_bed`
@@ -995,6 +1046,13 @@ ALTER TABLE `region_district`
 --
 ALTER TABLE `region_village`
   ADD CONSTRAINT `vilage_to_district` FOREIGN KEY (`districtId`) REFERENCES `region_district` (`districtId`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `schedule`
+--
+ALTER TABLE `schedule`
+  ADD CONSTRAINT `schedule_to_medical_personel` FOREIGN KEY (`medicalPersonelId`) REFERENCES `medical_personel` (`medicalPersonelId`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `schedule_to_polyclinic` FOREIGN KEY (`polyclinicId`) REFERENCES `polyclinic` (`polyclinicId`) ON DELETE CASCADE ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
