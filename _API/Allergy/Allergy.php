@@ -1,15 +1,11 @@
 <?php
     /**
-     * API Allergy List
-     * Method: GET
-     * Headers: token, account_token
-     * Parameters:
-     *   - limit     (int, default 10, min 10, max 100)
-     *   - page      (int, default 1)
-     *   - order_by  (string, default 'allergyId')
-     *   - short_by  (string, ASC/DESC, default DESC)
-     *   - keyword_by (string, field to search, default 'all')
-     *   - keyword   (string, search term)
+     * List Allergy (Riwayat Alergi Pasien)
+     * Endpoint: GET /_API/Allergy/Allergy.php?limit=10&page=1&order_by=allergyId&short_by=DESC&keyword_by=&keyword=
+     * Header: token, account_token
+     *
+     * Menampilkan daftar alergi pasien dengan paginasi, sorting, dan pencarian.
+     * Menampilkan informasi pasien, encounter, dan tenaga medis terkait.
      */
 
     // --- 1. Response Header ---
@@ -25,8 +21,8 @@
     date_default_timezone_set('UTC');
 
     // --- 2. Include Dependencies ---
-    include "../../_Config/Connection.php";     // $Conn adalah PDO
-    include "../../_Config/Helper.php";        // fungsi ValidatePermission, getRequestHeader, dll
+    include "../../_Config/Connection.php";
+    include "../../_Config/Helper.php";
     require "../../_Config/RateLimiter.php";
 
     // --- 3. Rate Limiter ---
@@ -44,9 +40,8 @@
     }
 
     // --- 5. Validasi Header Token & Account Token ---
-    $headers = getallheaders();
-    $apiToken     = $headers['token'] ?? '';
-    $accountToken = $headers['account_token'] ?? '';
+    $apiToken     = getRequestHeader('token');
+    $accountToken = getRequestHeader('account_token');
 
     if (empty($apiToken)) {
         http_response_code(401);
@@ -59,11 +54,10 @@
         exit;
     }
 
-    // --- 6. Validasi Token dan Permission (menggunakan PDO) ---
+    // --- 6. Validasi Token dan Permission ---
     $nowUtc = gmdate('Y-m-d H:i:s');
-
     try {
-        // 6a. Validasi API Token
+        // Validasi API Token
         $stmt = $Conn->prepare("
             SELECT t.*, k.client_id, k.api_name, k.id_api_key 
             FROM api_token t 
@@ -83,17 +77,16 @@
             exit;
         }
 
-        // 6b. Validasi Account Token
+        // Validasi Account Token
         $stmt = $Conn->prepare("
             SELECT accountId 
             FROM account_token 
             WHERE account_token = :account_token 
-            AND datetime_expired >= :nowUtc 
-            LIMIT 1
+            AND datetime_expired >= :nowUtc LIMIT 1
         ");
         $stmt->execute([
             ':account_token' => $accountToken,
-            ':nowUtc'        => $nowUtc
+            ':nowUtc' => $nowUtc
         ]);
         $accountTokenData = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$accountTokenData) {
@@ -103,7 +96,7 @@
         }
         $loggedInAccountId = (int) $accountTokenData['accountId'];
 
-        // 6c. Validasi Permission (fitur list_allergy)
+        // Validasi Permission (fitur list_allergy)
         $stmt = $Conn->prepare("SELECT id_service_feature FROM service_feature WHERE feature_name = :feature_name LIMIT 1");
         $stmt->execute([':feature_name' => 'list_allergy']);
         $feature = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -115,7 +108,7 @@
         $id_service_feature = (int) $feature['id_service_feature'];
         if (!ValidatePermission($Conn, $loggedInAccountId, $id_service_feature)) {
             http_response_code(403);
-            echo json_encode(["response" => ["message" => "Tidak memiliki izin untuk melihat data allergy", "code" => 403], "metadata" => []]);
+            echo json_encode(["response" => ["message" => "Tidak memiliki izin untuk melihat daftar alergi pasien", "code" => 403], "metadata" => []]);
             exit;
         }
 
@@ -126,115 +119,176 @@
         exit;
     }
 
-    // --- 7. Ambil Parameter GET ---
-    $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
-    $limit = max(10, min(100, $limit)); // min 10, max 100
+    // --- 7. Tangkap parameter query ---
+    $limit      = isset($_GET['limit']) ? (int) $_GET['limit'] : 10;
+    $page       = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+    $order_by   = isset($_GET['order_by']) ? trim($_GET['order_by']) : 'allergyId';
+    $short_by   = isset($_GET['short_by']) ? strtoupper(trim($_GET['short_by'])) : 'DESC';
+    $keyword_by = isset($_GET['keyword_by']) ? trim($_GET['keyword_by']) : '';
+    $keyword    = isset($_GET['keyword']) ? trim($_GET['keyword']) : '';
 
-    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-    $page = max(1, $page);
+    // --- 8. Validasi limit dan page ---
+    if ($limit < 10) $limit = 10;
+    if ($limit > 100) $limit = 100;
+    if ($page < 1) $page = 1;
+
+    // Set default order_by jika kosong
+    if (empty($order_by)) {
+        $order_by = 'allergyId';
+    }
+    if (empty($short_by)) {
+        $short_by = 'DESC';
+    }
+
+    // --- 9. Daftar kolom yang diizinkan untuk sorting dan filter (hanya dari tabel allergy) ---
+    $allowedColumns = [
+        'allergyId', 'patientId', 'encounterId', 'medicalPersonelId', 'satuSehatCode',
+        'allergenCategory', 'allergenName', 'allergenCode', 'allergenDisplay',
+        'allergenSystem', 'clinicalStatus', 'verificationStatus',
+        'creatAt', 'updateAt', 'creatBy', 'updateBy'
+    ];
+
+    // --- 10. Validasi order_by ---
+    if (!in_array($order_by, $allowedColumns, true)) {
+        $order_by = 'allergyId';
+    }
+
+    // --- 11. Validasi short_by ---
+    if (!in_array($short_by, ['ASC', 'DESC'], true)) {
+        $short_by = 'DESC';
+    }
+
+    // --- 12. Validasi keyword_by ---
+    if ($keyword_by !== '' && !in_array($keyword_by, $allowedColumns, true)) {
+        $keyword_by = '';
+    }
+
     $offset = ($page - 1) * $limit;
 
-    $order_by = isset($_GET['order_by']) ? $_GET['order_by'] : 'allergyId';
-    $short_by = isset($_GET['short_by']) ? strtoupper($_GET['short_by']) : 'DESC';
-
-    $keyword_by = isset($_GET['keyword_by']) ? $_GET['keyword_by'] : 'all';
-    $keyword    = isset($_GET['keyword']) ? $_GET['keyword'] : '';
-
-    // --- 8. Validasi Order dan Sort ---
-    $allowed_order = ['allergyId', 'patientId', 'encounterId', 'allergenName', 'clinicalStatus', 'verificationStatus', 'creatAt'];
-    $order_by = in_array($order_by, $allowed_order) ? $order_by : 'allergyId';
-    $short_by = ($short_by === 'ASC') ? 'ASC' : 'DESC';
-
-    // --- 9. Bangun Query Dasar ---
-    $sql = "SELECT a.*, 
-                p.name AS patient_name, 
-                p.nik AS patient_nik,
-                e.EncounterCode AS encounter_code,
-                mp.name AS medical_personel_name
-            FROM allergy a
-            LEFT JOIN patient p ON a.patientId = p.patientId
-            LEFT JOIN encounter e ON a.encounterId = e.encounterId
-            LEFT JOIN medical_personel mp ON a.medicalPersonelId = mp.medicalPersonelId
-            WHERE 1=1";
-
+    // --- 13. Build WHERE clause untuk filter ---
+    $where = "WHERE 1";
     $params = [];
+    if ($keyword !== '' && $keyword_by !== '') {
+        $where .= " AND a.`{$keyword_by}` LIKE :keyword";
+        $params[':keyword'] = "%{$keyword}%";
+    }
 
-    // --- 10. Filter Pencarian ---
-    if (!empty($keyword)) {
-        $keywordLike = "%$keyword%";
-        if ($keyword_by === 'patient_name') {
-            $sql .= " AND p.name LIKE :keyword";
-            $params[':keyword'] = $keywordLike;
-        } elseif ($keyword_by === 'allergen_name') {
-            $sql .= " AND a.allergenName LIKE :keyword";
-            $params[':keyword'] = $keywordLike;
-        } elseif ($keyword_by === 'allergen_category') {
-            $sql .= " AND a.allergenCategory LIKE :keyword";
-            $params[':keyword'] = $keywordLike;
-        } elseif ($keyword_by === 'clinical_status') {
-            $sql .= " AND a.clinicalStatus LIKE :keyword";
-            $params[':keyword'] = $keywordLike;
-        } elseif ($keyword_by === 'verification_status') {
-            $sql .= " AND a.verificationStatus LIKE :keyword";
-            $params[':keyword'] = $keywordLike;
-        } else {
-            // Pencarian global
-            $sql .= " AND (p.name LIKE :k1 OR a.allergenName LIKE :k2 
-                        OR a.allergenCategory LIKE :k3 OR a.clinicalStatus LIKE :k4 
-                        OR a.verificationStatus LIKE :k5)";
-            $params[':k1'] = $keywordLike;
-            $params[':k2'] = $keywordLike;
-            $params[':k3'] = $keywordLike;
-            $params[':k4'] = $keywordLike;
-            $params[':k5'] = $keywordLike;
+    // --- 14. Count total data ---
+    try {
+        $countSql = "SELECT COUNT(*) AS total FROM allergy a " . $where;
+        $countStmt = $Conn->prepare($countSql);
+        foreach ($params as $key => $value) {
+            $countStmt->bindValue($key, $value, PDO::PARAM_STR);
         }
+        $countStmt->execute();
+        $countRow = $countStmt->fetch(PDO::FETCH_ASSOC);
+        $total = (int) ($countRow['total'] ?? 0);
+    } catch (PDOException $e) {
+        error_log('[ListAllergy] Count error: ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(["response" => ["message" => "Internal Server Error", "code" => 500], "metadata" => []]);
+        exit;
     }
 
-    // --- 11. Hitung Total Data (tanpa limit) ---
-    $countSql = "SELECT COUNT(*) AS total FROM (" . $sql . ") AS count_query";
-    $stmtCount = $Conn->prepare($countSql);
-    foreach ($params as $key => &$val) {
-        $stmtCount->bindParam($key, $val);
+    // Validasi page tidak boleh melebihi total halaman
+    $totalPages = ceil($total / $limit);
+    if ($page > $totalPages && $total > 0) {
+        http_response_code(400);
+        echo json_encode([
+            "response" => [
+                "message" => "Page tidak boleh melebihi total halaman ($totalPages)",
+                "code" => 400
+            ],
+            "metadata" => []
+        ]);
+        exit;
     }
-    $stmtCount->execute();
-    $totalData = (int) $stmtCount->fetchColumn();
 
-    // --- 12. Ambil Data dengan Order dan Limit ---
-    $sql .= " ORDER BY a.$order_by $short_by LIMIT :limit OFFSET :offset";
-    $params[':limit']  = $limit;
-    $params[':offset'] = $offset;
+    // --- 15. Query utama dengan JOIN ke patient, encounter, medical_personel, dan account ---
+    try {
+        $sql = "SELECT
+                    a.allergyId,
+                    a.patientId,
+                    p.name AS patientName,
+                    p.noMedicalRecord,
+                    a.encounterId,
+                    e.EncounterCode,
+                    a.medicalPersonelId,
+                    mp.name AS medicalPersonelName,
+                    mp.medicalPersonelCategory,
+                    a.satuSehatCode,
+                    a.allergenCategory,
+                    a.allergenName,
+                    a.allergenCode,
+                    a.allergenDisplay,
+                    a.allergenSystem,
+                    a.clinicalStatus,
+                    a.verificationStatus,
+                    a.allergyDescription,
+                    a.creatAt,
+                    a.updateAt,
+                    a.creatBy,
+                    cAccount.name AS createdName,
+                    a.updateBy,
+                    uAccount.name AS updatedName
+                FROM allergy a
+                LEFT JOIN patient p ON a.patientId = p.patientId
+                LEFT JOIN encounter e ON a.encounterId = e.encounterId
+                LEFT JOIN medical_personel mp ON a.medicalPersonelId = mp.medicalPersonelId
+                LEFT JOIN account cAccount ON a.creatBy = cAccount.accountId
+                LEFT JOIN account uAccount ON a.updateBy = uAccount.accountId
+                " . $where;
+        $sql .= " ORDER BY a.`{$order_by}` {$short_by} LIMIT {$offset}, {$limit}";
 
-    $stmt = $Conn->prepare($sql);
-    foreach ($params as $key => &$val) {
-        $stmt->bindParam($key, $val);
-    }
-    $stmt->execute();
-    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // Format tanggal
-    foreach ($data as &$row) {
-        $row['creatAt'] = date('Y-m-d H:i:s', strtotime($row['creatAt']));
-        if (!empty($row['updateAt'])) {
-            $row['updateAt'] = date('Y-m-d H:i:s', strtotime($row['updateAt']));
+        $stmt = $Conn->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value, PDO::PARAM_STR);
         }
-    }
-    unset($row);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // --- 13. Response ---
-    $totalPages = ($limit > 0) ? ceil($totalData / $limit) : 0;
-    http_response_code(200);
-    echo json_encode([
-        'status'  => 'success',
-        'message' => 'Data alergi berhasil diambil.',
-        'data'    => $data,
-        'pagination' => [
-            'current_page' => $page,
-            'per_page'     => $limit,
-            'total_data'   => $totalData,
-            'total_pages'  => $totalPages,
-            'next_page'    => ($page < $totalPages) ? $page + 1 : null,
-            'prev_page'    => ($page > 1) ? $page - 1 : null
-        ]
-    ]);
-    exit;
+        // --- 16. Format response data ---
+        foreach ($rows as &$row) {
+            $row['allergyId'] = (int) $row['allergyId'];
+            $row['patientId'] = (int) $row['patientId'];
+            $row['encounterId'] = (int) $row['encounterId'];
+            $row['medicalPersonelId'] = $row['medicalPersonelId'] !== null ? (int) $row['medicalPersonelId'] : null;
+            $row['creatBy'] = $row['creatBy'] !== null ? (int) $row['creatBy'] : null;
+            $row['updateBy'] = $row['updateBy'] !== null ? (int) $row['updateBy'] : null;
+
+            // Hapus null values
+            if ($row['patientName'] === null) unset($row['patientName']);
+            if ($row['noMedicalRecord'] === null) unset($row['noMedicalRecord']);
+            if ($row['EncounterCode'] === null) unset($row['EncounterCode']);
+            if ($row['medicalPersonelName'] === null) unset($row['medicalPersonelName']);
+            if ($row['medicalPersonelCategory'] === null) unset($row['medicalPersonelCategory']);
+            if ($row['createdName'] === null) unset($row['createdName']);
+            if ($row['updatedName'] === null) unset($row['updatedName']);
+        }
+        unset($row);
+
+        // --- 17. Response Sukses ---
+        http_response_code(200);
+        echo json_encode([
+            "response" => [
+                "message" => "Daftar alergi pasien berhasil diambil",
+                "code" => 200
+            ],
+            "metadata" => [
+                "total" => $total,
+                "limit" => $limit,
+                "page" => $page,
+                "total_pages" => $totalPages,
+                "offset" => $offset,
+                "retrieved_at" => $nowUtc . ' GMT'
+            ],
+            "data" => $rows
+        ]);
+
+    } catch (PDOException $e) {
+        error_log('[ListAllergy] Query error: ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(["response" => ["message" => "Internal Server Error", "code" => 500], "metadata" => []]);
+        exit;
+    }
 ?>
