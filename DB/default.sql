@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Jul 26, 2026 at 11:09 AM
+-- Generation Time: Jul 31, 2026 at 10:07 PM
 -- Server version: 9.1.0
 -- PHP Version: 7.4.33
 
@@ -502,6 +502,138 @@ CREATE TABLE IF NOT EXISTS `medical_personel` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `observation_reference`
+--
+
+DROP TABLE IF EXISTS `observation_reference`;
+CREATE TABLE IF NOT EXISTS `observation_reference` (
+  `observationReferenceId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `categoryName` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Kategori observasi (istilah lokal)',
+  `categoryCode` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Kode Kategori FHIR',
+  `categoryDisplay` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Kategori observasi sesuai FHIR',
+  `categorySystem` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Sistem yang digunakan',
+  `observationName` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Nama observasi (istilah lokal)',
+  `observationCode` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Kode observasi sesuai FHIR',
+  `observationDisplay` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Nama observasi sesuai FHIR',
+  `observationSystem` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Sistem referensi yang digunakan',
+  `unitName` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Nama satuan (Istilah secara lokal)',
+  `unitCode` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Kode Unit Berdasarkan FHIR',
+  `unitDisplay` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Nama unit berdasarkan FHIR',
+  `unitSystem` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'System referensi yang digunakan',
+  `resultType` enum('Numeric','Decimal','Coded','Text') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Tipe hasil',
+  `allowSex` tinyint(1) NOT NULL COMMENT 'Jika hasil berkaitan dengan jenis kelamin',
+  `allowAge` tinyint(1) NOT NULL COMMENT 'Jika hasil berkaitan dengan kelas usia',
+  `status` tinyint(1) NOT NULL COMMENT '0: Deleted | 1 : Active',
+  `creatAt` datetime NOT NULL COMMENT 'Tanggal waktu Dibuat (UTC)',
+  `updateAt` datetime NOT NULL COMMENT 'Tanggal waktu Update Terakhir (UTC)',
+  `creatBy` int UNSIGNED DEFAULT NULL COMMENT 'Account yang membuat',
+  `updateBy` int UNSIGNED DEFAULT NULL COMMENT 'Account yang update terakhir',
+  PRIMARY KEY (`observationReferenceId`),
+  KEY `observation_reference_to_account_1` (`creatBy`),
+  KEY `observation_reference_to_account_2` (`updateBy`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Referensi observation atau pemeriksaan';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `observation_reference_age`
+--
+
+DROP TABLE IF EXISTS `observation_reference_age`;
+CREATE TABLE IF NOT EXISTS `observation_reference_age` (
+  `observationReferenceAgeId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `observationReferenceId` int UNSIGNED NOT NULL COMMENT 'dari tabel observation_reference',
+  `ageCategory` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Kategori Usia',
+  `ageMin` int DEFAULT NULL COMMENT 'Usia minimum',
+  `ageMax` int DEFAULT NULL COMMENT 'Usia maksimum',
+  `ageUnit` enum('Year','Month','Day') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Unit satuan usia',
+  PRIMARY KEY (`observationReferenceAgeId`),
+  KEY `usia_to_pemeriksaan` (`observationReferenceId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Referensi Observasi Kelas Usia';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `observation_reference_coded`
+--
+
+DROP TABLE IF EXISTS `observation_reference_coded`;
+CREATE TABLE IF NOT EXISTS `observation_reference_coded` (
+  `observationReferenceCodedId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `observationReferenceId` int UNSIGNED NOT NULL COMMENT 'Dari tabel observation_reference',
+  `observationReferenceAgeId` int UNSIGNED DEFAULT NULL COMMENT 'Jika Kategori Dikelompokan berdasarkan usia',
+  `groupGender` enum('Male','Female','All') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Jika berkaitan dengan jenis kelamin',
+  `valueResult` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Nilai coded (value coded)',
+  `labelResult` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Interpertasi dalam bahasa indonesia',
+  `displayResult` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Nama Interpertasi berdasarkan FHIR',
+  `codeResult` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Kode Interpertasi berdasarkan FHIR',
+  `systemResult` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT 'http://snomed.info/sct',
+  `normalResult` tinyint(1) NOT NULL COMMENT 'Menetapkan nilai ini sebagai nilai normal',
+  PRIMARY KEY (`observationReferenceCodedId`),
+  KEY `category_to_ref_pemeriksaan` (`observationReferenceId`),
+  KEY `category_to_usia` (`observationReferenceAgeId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Mapping hasil observation berdasarkan coded';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `observation_reference_range`
+--
+
+DROP TABLE IF EXISTS `observation_reference_range`;
+CREATE TABLE IF NOT EXISTS `observation_reference_range` (
+  `observationResultRangeId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `observationReferenceId` int UNSIGNED NOT NULL COMMENT 'Dari tabel observation_reference',
+  `observationReferenceAgeId` int UNSIGNED DEFAULT NULL COMMENT 'Dari tabel observation_reference_age',
+  `groupGender` enum('Male','Female','All') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Kelompok/Group Jenis Kelamin',
+  `minValue` decimal(15,2) DEFAULT NULL COMMENT 'Nilai minimum',
+  `maxValue` decimal(15,2) DEFAULT NULL COMMENT 'Nilai maksimum',
+  `rangeOperator` enum('Less','More','Between') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Lebih kecil dari, Lebih besar dari dan nilai diantara',
+  `InterpertationLabel` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Normal, Tinggi, Rendah, Sedang, Abnormal',
+  `InterpertationDisplay` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Low, High, Normal, DLL',
+  `InterpertationCode` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Kode FHIR',
+  `InterpertationSystem` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT 'http://snomed.info/sct ',
+  `InterpertationConclusion` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Contoh : Normal, Abnormal',
+  `normalResult` tinyint(1) NOT NULL COMMENT 'Jika Opsi ini adalah nilai normal',
+  PRIMARY KEY (`observationResultRangeId`),
+  KEY `id_referensi_pemeriksaan` (`observationReferenceId`),
+  KEY `range_to_usia` (`observationReferenceAgeId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Interpertasi observasi range';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `observation_result`
+--
+
+DROP TABLE IF EXISTS `observation_result`;
+CREATE TABLE IF NOT EXISTS `observation_result` (
+  `observationResumeId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `observationReferenceId` int UNSIGNED NOT NULL COMMENT 'Dari tabel observation_reference',
+  `satuSehatCode` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'ID Observation Dari SATUSEHAT',
+  `patientId` int UNSIGNED NOT NULL COMMENT 'Dari tabel patient',
+  `encounterId` int UNSIGNED NOT NULL COMMENT 'Dari tabel Encounter',
+  `medicalPersonelId` int UNSIGNED NOT NULL COMMENT 'Dari tabel medical_personel',
+  `observationAt` datetime NOT NULL COMMENT 'Waktu Pelaksanaan observasi (UTC)',
+  `resultNumeric` int DEFAULT NULL COMMENT 'Hasil dalam bentuk Numeric',
+  `resultDecimal` decimal(15,2) DEFAULT NULL COMMENT 'Hasil dalam bentuk Desimal',
+  `resultCoded` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Hasil dalam bentuk Coded',
+  `resultText` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT 'Hasil dalam bentuk TEXT',
+  `creatAt` datetime NOT NULL,
+  `updateAt` datetime NOT NULL,
+  `creatBy` int UNSIGNED DEFAULT NULL,
+  `updateBy` int UNSIGNED DEFAULT NULL,
+  PRIMARY KEY (`observationResumeId`),
+  KEY `observation_reference` (`observationReferenceId`),
+  KEY `observation_pasien` (`patientId`),
+  KEY `observation_result_to_encounter` (`encounterId`),
+  KEY `observation_result_to_account_1` (`creatBy`),
+  KEY `observation_result_to_account_2` (`updateBy`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Hasil observasi';
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `patient`
 --
 
@@ -589,6 +721,7 @@ CREATE TABLE IF NOT EXISTS `procedure_encounter` (
   `satusehatCode` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Procedure ID from SATUSEHAT',
   `procedureStart` datetime NOT NULL COMMENT 'Start Procedure (UTC)',
   `procedureEnd` datetime DEFAULT NULL COMMENT 'End Procedure (UTC)',
+  `procedureReferenceId` int UNSIGNED NOT NULL COMMENT 'Dari tabel procedure_referance',
   `resonReference` enum('ICD10','ICD11') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Versi ICD yang digunakan untuk resonCode',
   `resonCode` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Kode ICD10 - Alasan tindakan',
   `resonDisplay` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Description ICD10 - Alasan tindakan',
@@ -599,7 +732,10 @@ CREATE TABLE IF NOT EXISTS `procedure_encounter` (
   `updateBy` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel account',
   PRIMARY KEY (`procedureId`),
   KEY `id_pasien` (`patientId`),
-  KEY `id_kunjungan` (`encounterId`)
+  KEY `id_kunjungan` (`encounterId`),
+  KEY `procedure_to_account_1` (`creatBy`),
+  KEY `procedure_to_account_2` (`updateBy`),
+  KEY `procedure_to_reference` (`procedureReferenceId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Data tindakan yang diberikan kepada pasien';
 
 -- --------------------------------------------------------
@@ -611,16 +747,16 @@ CREATE TABLE IF NOT EXISTS `procedure_encounter` (
 DROP TABLE IF EXISTS `procedure_performer`;
 CREATE TABLE IF NOT EXISTS `procedure_performer` (
   `procedurePerformerId` int UNSIGNED NOT NULL AUTO_INCREMENT,
-  `id_tindakan` int UNSIGNED NOT NULL COMMENT 'Dari tabel tindakan',
-  `id_praktisi` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel praktisi',
-  `performer_type` enum('Utama','Pendamping') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
-  `performer_ihs` varchar(255) DEFAULT NULL COMMENT 'ID Practitioner Pelaksana (SATUSEHAT)',
-  `performer_nik` varchar(255) DEFAULT NULL COMMENT 'NIK Pelaksana',
-  `performer_nama` varchar(255) NOT NULL COMMENT 'Nama lengkap pelaksana',
-  `performer_notes` text COMMENT 'Catatan dari performer',
+  `procedureId` int UNSIGNED NOT NULL COMMENT 'Dari tabel procedure_encounter',
+  `medicalPersonelId` int UNSIGNED DEFAULT NULL COMMENT 'dari tabel medical_personel',
+  `performerType` enum('Primary','Assistant') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Tipe praktisi yang terlibat',
+  `id_practitioner` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'ID Practitioner Pelaksana (SATUSEHAT)',
+  `performerNik` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'NIK Pelaksana',
+  `performerName` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Nama lengkap pelaksana',
+  `performerNote` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT 'Catatan dari performer',
   PRIMARY KEY (`procedurePerformerId`),
-  KEY `id_tindakan` (`id_tindakan`),
-  KEY `id_praktisi` (`id_praktisi`)
+  KEY `id_tindakan` (`procedureId`),
+  KEY `id_praktisi` (`medicalPersonelId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Untuk mencatat siapa saja yang terlibat dalam tindakan';
 
 -- --------------------------------------------------------
@@ -866,6 +1002,22 @@ CREATE TABLE IF NOT EXISTS `tb_profile` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `unit_reference`
+--
+
+DROP TABLE IF EXISTS `unit_reference`;
+CREATE TABLE IF NOT EXISTS `unit_reference` (
+  `unitReferenceId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `unitName` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Nama unit (lokal)',
+  `unitDisplay` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Penulisan Unit dalam matematis',
+  `unitCode` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'kode unit FHIR',
+  `unitSystem` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Sistem referensi yang digunakan',
+  PRIMARY KEY (`unitReferenceId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Referensi Satuan';
+
 --
 -- Constraints for dumped tables
 --
@@ -998,6 +1150,43 @@ ALTER TABLE `medical_personel`
   ADD CONSTRAINT `personel_to_vilage` FOREIGN KEY (`villageId`) REFERENCES `region_village` (`villageId`) ON DELETE SET NULL ON UPDATE RESTRICT;
 
 --
+-- Constraints for table `observation_reference`
+--
+ALTER TABLE `observation_reference`
+  ADD CONSTRAINT `observation_reference_to_account_1` FOREIGN KEY (`creatBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `observation_reference_to_account_2` FOREIGN KEY (`updateBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT;
+
+--
+-- Constraints for table `observation_reference_age`
+--
+ALTER TABLE `observation_reference_age`
+  ADD CONSTRAINT `age_to_observation_reference` FOREIGN KEY (`observationReferenceId`) REFERENCES `observation_reference` (`observationReferenceId`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `observation_reference_coded`
+--
+ALTER TABLE `observation_reference_coded`
+  ADD CONSTRAINT `observation_category_to_age` FOREIGN KEY (`observationReferenceAgeId`) REFERENCES `observation_reference_age` (`observationReferenceAgeId`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `observation_category_to_reference` FOREIGN KEY (`observationReferenceId`) REFERENCES `observation_reference` (`observationReferenceId`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `observation_reference_range`
+--
+ALTER TABLE `observation_reference_range`
+  ADD CONSTRAINT `result_range_to_age` FOREIGN KEY (`observationReferenceAgeId`) REFERENCES `observation_reference_age` (`observationReferenceAgeId`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `result_range_to_reference` FOREIGN KEY (`observationReferenceId`) REFERENCES `observation_reference` (`observationReferenceId`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `observation_result`
+--
+ALTER TABLE `observation_result`
+  ADD CONSTRAINT `observation_result_to_account_1` FOREIGN KEY (`creatBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `observation_result_to_account_2` FOREIGN KEY (`updateBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `observation_result_to_encounter` FOREIGN KEY (`encounterId`) REFERENCES `encounter` (`encounterId`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  ADD CONSTRAINT `observation_result_to_observation_reference` FOREIGN KEY (`observationReferenceId`) REFERENCES `observation_reference` (`observationReferenceId`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `observation_result_to_patient` FOREIGN KEY (`patientId`) REFERENCES `patient` (`patientId`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
 -- Constraints for table `patient`
 --
 ALTER TABLE `patient`
@@ -1019,8 +1208,18 @@ ALTER TABLE `polyclinic`
 -- Constraints for table `procedure_encounter`
 --
 ALTER TABLE `procedure_encounter`
+  ADD CONSTRAINT `procedure_to_account_1` FOREIGN KEY (`creatBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `procedure_to_account_2` FOREIGN KEY (`updateBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
   ADD CONSTRAINT `procedure_to_encounter` FOREIGN KEY (`encounterId`) REFERENCES `encounter` (`encounterId`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `procedure_to_patient` FOREIGN KEY (`patientId`) REFERENCES `patient` (`patientId`) ON DELETE CASCADE ON UPDATE CASCADE;
+  ADD CONSTRAINT `procedure_to_patient` FOREIGN KEY (`patientId`) REFERENCES `patient` (`patientId`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `procedure_to_reference` FOREIGN KEY (`procedureReferenceId`) REFERENCES `procedure_reference` (`procedureReferenceId`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `procedure_performer`
+--
+ALTER TABLE `procedure_performer`
+  ADD CONSTRAINT `performer_to_medicalPerformer` FOREIGN KEY (`medicalPersonelId`) REFERENCES `medical_personel` (`medicalPersonelId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `performer_to_procedure` FOREIGN KEY (`procedureId`) REFERENCES `procedure_encounter` (`procedureId`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `procedure_reference`
