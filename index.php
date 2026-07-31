@@ -17,6 +17,8 @@
             font-family: "Segoe UI", sans-serif;
             background: #f4f8fb;
             overflow-x: hidden;
+            scroll-behavior: smooth;
+            padding-top: 88px;
         }
 
         .hero {
@@ -49,8 +51,38 @@
             left: -120px;
         }
 
-        .navbar {
-            background: transparent;
+        .site-navbar {
+            background: rgba(10, 25, 47, .92);
+            backdrop-filter: blur(14px);
+            border-bottom: 1px solid rgba(255, 255, 255, .08);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, .18);
+        }
+
+        .site-navbar .navbar-brand,
+        .site-navbar .nav-link {
+            color: #fff !important;
+        }
+
+        .site-navbar .nav-link {
+            opacity: .9;
+            font-weight: 500;
+            padding-left: .9rem;
+            padding-right: .9rem;
+        }
+
+        .site-navbar .nav-link:hover,
+        .site-navbar .nav-link:focus,
+        .site-navbar .nav-link.active {
+            opacity: 1;
+            color: #8be9fd !important;
+        }
+
+        .navbar-toggler {
+            border-color: rgba(255, 255, 255, .25);
+        }
+
+        .navbar-toggler:focus {
+            box-shadow: 0 0 0 .2rem rgba(13, 110, 253, .25);
         }
 
         .hero-content {
@@ -113,16 +145,41 @@
 <body>
 
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark py-3">
+    <nav class="navbar navbar-expand-lg navbar-dark site-navbar fixed-top py-3">
         <div class="container">
             <a class="navbar-brand fw-bold" href="#">
                 <i class="bi bi-hospital-fill me-2"></i>RZF Medis Integrator
             </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topNavbar" aria-controls="topNavbar" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="topNavbar">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#beranda">Beranda</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#fitur">Fitur</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#statistik">Statistik</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#kontak">Kontak</a>
+                    </li>
+                    <li class="nav-item ms-lg-2">
+                        <a class="btn btn-outline-light btn-sm rounded-pill px-3" href="https://github.com/solihulhadi141213/rzf-medis-integrator" target="_blank" rel="noopener">
+                            <i class="bi bi-github me-1"></i> Repo
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </div>
     </nav>
 
     <!-- Hero Section -->
-    <section class="hero d-flex align-items-center">
+    <section class="hero d-flex align-items-center" id="beranda">
         <div class="container hero-content">
             <div class="row align-items-center">
                 
@@ -147,7 +204,7 @@
                         </a>
                     </div>
 
-                    <div class="row mt-5">
+                    <div class="row mt-5" id="statistik">
                         <div class="col-4 stat-box">
                             <h2>REST</h2>
                             <small>API Service</small>
@@ -165,7 +222,7 @@
 
                 <!-- Kanan: Fitur Utama (Glassmorphism) -->
                 <div class="col-lg-5 mt-5 mt-lg-0">
-                    <div class="glass p-4 shadow-lg">
+                    <div class="glass p-4 shadow-lg" id="fitur">
                         <h4 class="mb-4 text-white">
                             <i class="bi bi-stars me-2"></i>Fitur Utama
                         </h4>
@@ -227,7 +284,7 @@
     </section>
 
     <!-- Footer -->
-    <footer class="text-center">
+    <footer class="text-center" id="kontak">
         <div class="container">
             <strong>RZF Medis Integrator</strong><br>
             <p class="mb-2">Middleware Platform untuk Integrasi Sistem Informasi Kesehatan berbasis REST API.</p>
@@ -237,5 +294,6 @@
         </div>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
