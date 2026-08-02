@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Jul 31, 2026 at 10:07 PM
+-- Generation Time: Aug 02, 2026 at 09:57 PM
 -- Server version: 9.1.0
--- PHP Version: 7.4.33
+-- PHP Version: 8.1.31
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -221,6 +221,37 @@ CREATE TABLE IF NOT EXISTS `body_site` (
   PRIMARY KEY (`id_body_site`),
   KEY `body_site_to_account` (`author_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Daftar Referensi Lokasi Tubuh';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `care_plan`
+--
+
+DROP TABLE IF EXISTS `care_plan`;
+CREATE TABLE IF NOT EXISTS `care_plan` (
+  `carePlanId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `patientId` int UNSIGNED NOT NULL COMMENT 'ID pasien (dari tabel patient)',
+  `encounterId` int UNSIGNED NOT NULL COMMENT 'ID Encounter (Dari tabel encounter)',
+  `medicalPersonelId` int UNSIGNED NOT NULL COMMENT 'ID medical personel (Dari tabel medical_personel)',
+  `satuSehatCode` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'ID Care Plan Dari SATUSEHAT',
+  `carePlanTitle` varchar(255) NOT NULL COMMENT 'Judul Dari Care Plan',
+  `carePlanStatus` enum('draft','active','on-hold','revoked','completed','entered-in-error','unknown') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'active' COMMENT 'Status terkini dari CarePlan',
+  `carePlanIntent` enum('proposal','plan','order','option') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'plan' COMMENT 'Menjelaskan tujuan atau maksud CarePlan',
+  `carePlanCategoryName` varchar(255) DEFAULT NULL COMMENT 'Kategori care plan dalam bahasa lokal',
+  `carePlanCategoryCode` varchar(20) DEFAULT NULL COMMENT 'Kode Kategori care plan Sesuai terminologi (SNOMED)',
+  `carePlanCategoryDisplay` varchar(266) DEFAULT NULL COMMENT 'Kategori care plan sesuai terminologi (SNOMED)',
+  `carePlanCategorySystem` varchar(255) DEFAULT NULL COMMENT 'Sistem Kategori Careplan yang digunakan (http://snomed.info/sct)',
+  `carePlaneDescription` text COMMENT 'Penjelasan naratif mengenai isi CarePlan',
+  `creatAt` datetime NOT NULL COMMENT 'Timezone UTC',
+  `updateAt` datetime NOT NULL COMMENT 'Timezone UTC',
+  `creatBy` int UNSIGNED DEFAULT NULL COMMENT 'Dari tabel account',
+  `updateBy` int UNSIGNED DEFAULT NULL COMMENT 'Dari tabel account',
+  PRIMARY KEY (`carePlanId`),
+  KEY `careplan_to_patient` (`patientId`),
+  KEY `careplan_to_encounter` (`encounterId`),
+  KEY `careplan_to_medicalpersonel` (`medicalPersonelId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -502,6 +533,77 @@ CREATE TABLE IF NOT EXISTS `medical_personel` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `medication`
+--
+
+DROP TABLE IF EXISTS `medication`;
+CREATE TABLE IF NOT EXISTS `medication` (
+  `medicationId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `satuSehatCode` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'ID Medication (Satusehat)',
+  `medicationLocalCode` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'ID/Kode dalam format Lokal',
+  `medicationName` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Nama/Brand Obat|Alkes',
+  `medicationGroup` enum('Medication','Device') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Medication: Obat | Device : Alat Kesehatan',
+  `medicationCategory` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'Kategori Obat|Alkes (Ex: Antibiotik, Laboratorium)',
+  `kfaCode` varchar(50) DEFAULT NULL COMMENT 'Kode KFA Satusehat',
+  `kfaDisplay` varchar(255) DEFAULT NULL COMMENT 'Nama sesuai KFA Satusehat',
+  `kfaSystem` varchar(255) DEFAULT NULL COMMENT 'System KFA Satusehat',
+  `medicationFormName` varchar(100) NOT NULL COMMENT 'Nama sediaan lokal',
+  `medicationFormCode` varchar(50) DEFAULT NULL COMMENT 'Kode Sediaan',
+  `medicationFormDisplay` varchar(255) DEFAULT NULL COMMENT 'Nama Sediaan',
+  `medicationFormSystem` varchar(255) DEFAULT NULL COMMENT 'Sistem Sediaan (http://terminology.kemkes.go.id/CodeSystem/medication-form)',
+  `medicationTypeCode` varchar(50) DEFAULT NULL COMMENT 'Kode tipe Obat/Alkes',
+  `medicationTypeDisplay` varchar(255) DEFAULT NULL COMMENT 'Nama tipe Obat/Alkes',
+  `medicationTypeSystem` varchar(255) DEFAULT NULL COMMENT 'Sistem tipe Obat/Alkes',
+  `manufacturerId` varchar(50) DEFAULT NULL COMMENT 'ID manufactur',
+  `manufacturerName` varchar(255) DEFAULT NULL COMMENT 'Nama manufactur',
+  `medicationIngredient` json DEFAULT NULL COMMENT 'Kandungan zat aktif',
+  `CostPrice` decimal(15,2) UNSIGNED DEFAULT NULL COMMENT 'Harga Pokok',
+  `ActualStock` decimal(15,2) UNSIGNED DEFAULT NULL COMMENT 'Stok Aktual',
+  `MinimumStock` decimal(15,2) UNSIGNED DEFAULT NULL COMMENT 'Stok Minimum',
+  `medicationStatus` enum('Available','Registered','Deleted') NOT NULL DEFAULT 'Available' COMMENT 'Status ketersediaan',
+  PRIMARY KEY (`medicationId`),
+  UNIQUE KEY `medicationLocalCode` (`medicationLocalCode`),
+  UNIQUE KEY `medicationLocalUid` (`satuSehatCode`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Master Obat';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `medication_multi_form`
+--
+
+DROP TABLE IF EXISTS `medication_multi_form`;
+CREATE TABLE IF NOT EXISTS `medication_multi_form` (
+  `medicationMultiFormId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `medicationId` int UNSIGNED NOT NULL COMMENT 'Dari tabel medication',
+  `medicationFormName` varchar(100) NOT NULL COMMENT 'Nama satuan/unit lokal',
+  `medicationFormCode` varchar(50) DEFAULT NULL COMMENT 'Kode satuan/unit Satusehat',
+  `medicationFormDisplay` varchar(255) DEFAULT NULL COMMENT 'Nama satuan/unit Satusehat',
+  `medicationFormSystem` varchar(255) DEFAULT NULL COMMENT 'System satuan/unit Satusehat',
+  `conversionFactor` decimal(15,2) NOT NULL DEFAULT '1.00' COMMENT 'Faktor Konversi',
+  PRIMARY KEY (`medicationMultiFormId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `medication_selling_price`
+--
+
+DROP TABLE IF EXISTS `medication_selling_price`;
+CREATE TABLE IF NOT EXISTS `medication_selling_price` (
+  `medicationSellingPriceId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `medicationId` int UNSIGNED NOT NULL COMMENT 'Dari tabel medication',
+  `medicationSellingPriceName` varchar(100) NOT NULL COMMENT 'Nama Harga Jual',
+  `medicationSellingPriceDescription` varchar(255) DEFAULT NULL COMMENT 'Deskripsi Harga jual',
+  `medicationSellingPrice` decimal(15,2) UNSIGNED DEFAULT NULL COMMENT 'Harga Jual',
+  PRIMARY KEY (`medicationSellingPriceId`),
+  KEY `selling_price_to_medication` (`medicationId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Harga jual multiple';
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `observation_reference`
 --
 
@@ -613,22 +715,29 @@ CREATE TABLE IF NOT EXISTS `observation_result` (
   `satuSehatCode` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'ID Observation Dari SATUSEHAT',
   `patientId` int UNSIGNED NOT NULL COMMENT 'Dari tabel patient',
   `encounterId` int UNSIGNED NOT NULL COMMENT 'Dari tabel Encounter',
-  `medicalPersonelId` int UNSIGNED NOT NULL COMMENT 'Dari tabel medical_personel',
+  `medicalPersonelId` int UNSIGNED NOT NULL COMMENT 'Tenaga kesehatan yang mengisi observasi (Dari tabel medical_personel)',
   `observationAt` datetime NOT NULL COMMENT 'Waktu Pelaksanaan observasi (UTC)',
   `resultNumeric` int DEFAULT NULL COMMENT 'Hasil dalam bentuk Numeric',
   `resultDecimal` decimal(15,2) DEFAULT NULL COMMENT 'Hasil dalam bentuk Desimal',
   `resultCoded` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'Hasil dalam bentuk Coded',
   `resultText` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT 'Hasil dalam bentuk TEXT',
-  `creatAt` datetime NOT NULL,
-  `updateAt` datetime NOT NULL,
-  `creatBy` int UNSIGNED DEFAULT NULL,
-  `updateBy` int UNSIGNED DEFAULT NULL,
+  `InterpertationByAge` int UNSIGNED DEFAULT NULL COMMENT 'Dari tabel observation_reference_age',
+  `InterpertationByCoded` int UNSIGNED DEFAULT NULL COMMENT 'Dari tabel observation_reference_coded',
+  `InterpertationByRange` int UNSIGNED DEFAULT NULL COMMENT 'Dari tabel observation_reference_range',
+  `OtherDetail` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT 'Keterangan lain yang perlu diisi',
+  `creatAt` datetime NOT NULL COMMENT 'Waktu Data Dibuat (UTC)',
+  `updateAt` datetime NOT NULL COMMENT 'Waktu Data Diperbaharui (UTC)',
+  `creatBy` int UNSIGNED DEFAULT NULL COMMENT 'Account pembuat (tabel account)',
+  `updateBy` int UNSIGNED DEFAULT NULL COMMENT 'Account memperbaharui(tabel account)',
   PRIMARY KEY (`observationResumeId`),
   KEY `observation_reference` (`observationReferenceId`),
   KEY `observation_pasien` (`patientId`),
   KEY `observation_result_to_encounter` (`encounterId`),
   KEY `observation_result_to_account_1` (`creatBy`),
-  KEY `observation_result_to_account_2` (`updateBy`)
+  KEY `observation_result_to_account_2` (`updateBy`),
+  KEY `observation_result_to_age` (`InterpertationByAge`),
+  KEY `observation_result_to_coded` (`InterpertationByCoded`),
+  KEY `observation_result_to_range` (`InterpertationByRange`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Hasil observasi';
 
 -- --------------------------------------------------------
@@ -1078,6 +1187,14 @@ ALTER TABLE `body_site`
   ADD CONSTRAINT `body_site_to_account` FOREIGN KEY (`author_id`) REFERENCES `account` (`accountId`) ON DELETE SET NULL;
 
 --
+-- Constraints for table `care_plan`
+--
+ALTER TABLE `care_plan`
+  ADD CONSTRAINT `careplan_to_encounter` FOREIGN KEY (`encounterId`) REFERENCES `encounter` (`encounterId`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `careplan_to_medicalpersonel` FOREIGN KEY (`medicalPersonelId`) REFERENCES `medical_personel` (`medicalPersonelId`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `careplan_to_patient` FOREIGN KEY (`patientId`) REFERENCES `patient` (`patientId`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
 -- Constraints for table `diagnosis`
 --
 ALTER TABLE `diagnosis`
@@ -1150,6 +1267,12 @@ ALTER TABLE `medical_personel`
   ADD CONSTRAINT `personel_to_vilage` FOREIGN KEY (`villageId`) REFERENCES `region_village` (`villageId`) ON DELETE SET NULL ON UPDATE RESTRICT;
 
 --
+-- Constraints for table `medication_selling_price`
+--
+ALTER TABLE `medication_selling_price`
+  ADD CONSTRAINT `selling_price_to_medication` FOREIGN KEY (`medicationId`) REFERENCES `medication` (`medicationId`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
 -- Constraints for table `observation_reference`
 --
 ALTER TABLE `observation_reference`
@@ -1182,9 +1305,12 @@ ALTER TABLE `observation_reference_range`
 ALTER TABLE `observation_result`
   ADD CONSTRAINT `observation_result_to_account_1` FOREIGN KEY (`creatBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
   ADD CONSTRAINT `observation_result_to_account_2` FOREIGN KEY (`updateBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `observation_result_to_age` FOREIGN KEY (`InterpertationByAge`) REFERENCES `observation_reference_age` (`observationReferenceAgeId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `observation_result_to_coded` FOREIGN KEY (`InterpertationByCoded`) REFERENCES `observation_reference_coded` (`observationReferenceCodedId`) ON DELETE SET NULL ON UPDATE RESTRICT,
   ADD CONSTRAINT `observation_result_to_encounter` FOREIGN KEY (`encounterId`) REFERENCES `encounter` (`encounterId`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   ADD CONSTRAINT `observation_result_to_observation_reference` FOREIGN KEY (`observationReferenceId`) REFERENCES `observation_reference` (`observationReferenceId`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `observation_result_to_patient` FOREIGN KEY (`patientId`) REFERENCES `patient` (`patientId`) ON DELETE CASCADE ON UPDATE CASCADE;
+  ADD CONSTRAINT `observation_result_to_patient` FOREIGN KEY (`patientId`) REFERENCES `patient` (`patientId`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `observation_result_to_range` FOREIGN KEY (`InterpertationByRange`) REFERENCES `observation_reference_range` (`observationResultRangeId`) ON DELETE SET NULL ON UPDATE RESTRICT;
 
 --
 -- Constraints for table `patient`
