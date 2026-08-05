@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Aug 02, 2026 at 09:57 PM
+-- Generation Time: Aug 05, 2026 at 07:00 PM
 -- Server version: 9.1.0
--- PHP Version: 8.1.31
+-- PHP Version: 7.4.33
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -365,6 +365,54 @@ CREATE TABLE IF NOT EXISTS `encounter_status` (
   KEY `status_to_encounter` (`encounterId`),
   KEY `encounter_status_to_account` (`updateBy`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Riwayat perubahan status pelayanan kunjungan';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `episode_of_care`
+--
+
+DROP TABLE IF EXISTS `episode_of_care`;
+CREATE TABLE IF NOT EXISTS `episode_of_care` (
+  `episodeOfCareId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `episodeOfCareCode` varchar(50) NOT NULL COMMENT 'Kode Lokal Episode Of Care',
+  `patientId` int UNSIGNED NOT NULL COMMENT 'Dari tabel patient',
+  `encounterId` int UNSIGNED NOT NULL COMMENT 'dari tabel encounter',
+  `diagnosisId` int UNSIGNED NOT NULL COMMENT 'Dari tabel Diagnosis',
+  `medicalPersonelId` int UNSIGNED DEFAULT NULL COMMENT 'Dari tabel medical_personel',
+  `episodeOfCareTypeSystem` varchar(255) NOT NULL COMMENT 'Sistem referensi tipe perawatan',
+  `episodeOfCareTypeCode` varchar(50) NOT NULL COMMENT 'Kode tipe perawatan',
+  `episodeOfCareTypeDisplay` varchar(255) NOT NULL COMMENT 'Nama tipe perawatan',
+  `episodeOfCareStatus` enum('planned','waitlist','active','onhold','finished','cancelled','entered-in-error') NOT NULL COMMENT 'Status Perawatan',
+  `episodeOfCareStart` date NOT NULL COMMENT 'Mulai perawatan',
+  `episodeOfCareEnd` date DEFAULT NULL COMMENT 'Selesai perawatan',
+  `creatAt` datetime NOT NULL COMMENT 'Tanggal dibuat (UTC)',
+  `updateAt` datetime NOT NULL COMMENT 'Tanggal diubah (UTC)',
+  `creatBy` int UNSIGNED DEFAULT NULL COMMENT 'Dari tabel account',
+  `updateBy` int UNSIGNED DEFAULT NULL COMMENT 'Dari tabel account',
+  PRIMARY KEY (`episodeOfCareId`),
+  KEY `eoc_to_patient` (`patientId`),
+  KEY `eoc_to_encounter` (`encounterId`),
+  KEY `eoc_to_diagnosis` (`diagnosisId`),
+  KEY `eoc_to_medical_personel` (`medicalPersonelId`),
+  KEY `eoc_to_account_1` (`creatBy`),
+  KEY `eoc_to_account_2` (`updateBy`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Seri Kunjungan Perawatan pasien';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `episode_of_care_reference`
+--
+
+DROP TABLE IF EXISTS `episode_of_care_reference`;
+CREATE TABLE IF NOT EXISTS `episode_of_care_reference` (
+  `episodeOfCareReferenceId` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `episodeOfCareTypeCode` varchar(50) NOT NULL,
+  `episodeOfCareTypeDisplay` varchar(255) NOT NULL,
+  `episodeOfCareTypeSystem` varchar(255) NOT NULL,
+  PRIMARY KEY (`episodeOfCareReferenceId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Referenci Episode Of Care';
 
 -- --------------------------------------------------------
 
@@ -1230,6 +1278,17 @@ ALTER TABLE `encounter_performer`
 ALTER TABLE `encounter_status`
   ADD CONSTRAINT `encounter_status_to_account` FOREIGN KEY (`updateBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
   ADD CONSTRAINT `status_to_encounter` FOREIGN KEY (`encounterId`) REFERENCES `encounter` (`encounterId`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `episode_of_care`
+--
+ALTER TABLE `episode_of_care`
+  ADD CONSTRAINT `eoc_to_account_1` FOREIGN KEY (`creatBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `eoc_to_account_2` FOREIGN KEY (`updateBy`) REFERENCES `account` (`accountId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `eoc_to_diagnosis` FOREIGN KEY (`diagnosisId`) REFERENCES `diagnosis` (`diagnosisId`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `eoc_to_encounter` FOREIGN KEY (`encounterId`) REFERENCES `encounter` (`encounterId`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `eoc_to_medical_personel` FOREIGN KEY (`medicalPersonelId`) REFERENCES `medical_personel` (`medicalPersonelId`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  ADD CONSTRAINT `eoc_to_patient` FOREIGN KEY (`patientId`) REFERENCES `patient` (`patientId`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `inpatient_bed`
